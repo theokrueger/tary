@@ -1,0 +1,15 @@
+[package]
+name = "tary"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+log = "0.4"
+pretty_env_logger = "0.5"
+toml = "0.9.5"
+serde = { version = "1.0", features = ["derive"] }
+clap = { version = "4.5.43", features = ["derive"] }
+dirs = "6.0"
+ollama-rs = { version = "0.3.2", features = ["stream"] }
+tokio = { version = "1", features = ["full"] }
+tokio-stream = { version = "0.1.17", features = ["full"] }
