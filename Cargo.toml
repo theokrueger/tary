@@ -10,6 +10,11 @@ toml = "0.9.5"
 serde = { version = "1.0", features = ["derive"] }
 clap = { version = "4.5.43", features = ["derive"] }
 dirs = "6.0"
-ollama-rs = { version = "0.3.2", features = ["stream"] }
-tokio = { version = "1", features = ["full"] }
-tokio-stream = { version = "0.1.17", features = ["full"] }
+ollama-rs = { version = "0.3.2", features = [] }
+tokio = { version = "1", features = ["rt", "macros", "rt-multi-thread"] }
+inquire = "0.7.5"
+escposify = { version = "0.6.2", features = [] }
+time = "0.3.41"
+teloxide = { version = "0.17.0", features = ["macros"] }
+securestore = "0.100.0"
+

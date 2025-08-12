@@ -1,0 +1,34 @@
+* Tary
+
+** Storing tokens
+Tary uses [[https://docs.rs/securestore/latest/securestore/][ssclient]] for key generation and encryption
+
+To create a new key in the default location:
+#+BEGIN_SRC bash
+  cargo install ssclient
+  mkdir -p ~/.local/share/tary/
+  cd ~/.local/share/tary/
+  ssclient create secrets.json --export-key secrets.key
+  # Type your password
+#+END_SRC
+It is the user's responsibility to keep `secrets.key` safe. It is how Tary opens the secrets database.
+
+** Managing sources
+Adding and enabling or disabling sources:
+
+*** Telegram
+1. Create a new bot using [[https://t.me/botfather][@Botfather]] to get a token in the format `123456789:blablabla`
+
+2. Add the token to Tary's secrets store
+#+BEGIN_SRC bash
+  cd ~/.local/share/tary/
+  ssclient set TELOXIDE_TOKEN
+  # Type your password
+  # Paste the token
+#+END_SRC
+
+3. Ensure telegram is enabled in `tary.toml`
+#+BEGIN_SRC toml
+  [sources.telegram]
+  enabled = true
+#+END_SRC
