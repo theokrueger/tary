@@ -17,4 +17,6 @@ escposify = { version = "0.6.2", features = [] }
 time = "0.3.41"
 teloxide = { version = "0.17.0", features = ["macros"] }
 securestore = "0.100.0"
+escpos = { version = "0.16.0", features = ["full"] }
+nusb = "0.2.0"
 

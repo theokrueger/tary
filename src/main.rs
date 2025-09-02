@@ -15,6 +15,9 @@ use crate::tary_llm::TaryLLM;
 mod sources;
 use crate::sources::Sources;
 
+mod destinations;
+use crate::destinations::Destinations;
+
 mod storage;
 use crate::storage::Storage;
 
@@ -53,6 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cfg = Arc::new(Config::load_or_default());
     let storage = Arc::new(Storage::new(cfg.clone()));
     let sources = Sources::new(cfg.clone(), storage.clone());
+    let destinations = Destinations::new(cfg.clone(), storage.clone());
 
     // ollama test
     let tary = TaryLLM::new(cfg.clone()).await;

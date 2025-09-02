@@ -14,23 +14,34 @@ pub struct Content {
     due: Option<Date>,
 }
 
-pub trait SourceListener {
-    async fn listen(&self);
-    fn init(cfg: Arc<Config>, storage: Arc<Storage>) -> impl SourceListener;
+pub trait TarySource {
+    async fn listen(self);
+    fn init(cfg: Arc<Config>, storage: Arc<Storage>) -> Option<Box<Self>>;
 }
 
+#[derive(Default)]
 pub struct Sources {
-    telegram: Telegram,
+    telegram: Option<Box<Telegram>>,
 }
 
 impl Sources {
     pub fn new(cfg: Arc<Config>, storage: Arc<Storage>) -> Self {
-        Self {
-            telegram: Telegram::init(cfg.clone(), storage.clone()),
+        if let Some(_) = cfg.sources {
+            Self {
+                telegram: Telegram::init(cfg.clone(), storage.clone()),
+            }
+        } else {
+            Self::default()
         }
     }
 
-    pub async fn start(&self) {
-        tokio::join!(self.telegram.listen());
+    pub async fn start(self) {
+        let mut handles = Vec::new();
+        if let Some(t) = self.telegram {
+            handles.push(tokio::spawn(t.listen()));
+        }
+        for handle in handles {
+            handle.await.unwrap();
+        }
     }
 }

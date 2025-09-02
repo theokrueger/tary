@@ -6,6 +6,7 @@ use std::{
     fs::{self, File},
     io::{Error, ErrorKind, Write},
 };
+const CONFIG_DIR: &str = "tary";
 const CONFIG_FILE: &str = "tary.toml";
 
 const DEFAULT_CONFIG: &str = r#"# Default tary config.
@@ -18,7 +19,24 @@ name = "Jane Doe"
 
 ## (Optional) Telegram settings
 [sources.telegram]
+# use Telegram input?
 enabled = true
+
+## (Optional) POS Printer destination
+[destinations.pos_printer]
+# use POS (receipt) printer output?
+enabled = true
+
+# Printer connection type
+# Options: USB
+connection = "USB"
+
+# (Optional, required for USB connection type)
+# USB PID/VID for USB communication
+# Example for Seiko Epson Corp. TM-T20II
+# Ensure you have access to writing this USB device. You may need to make a new udev rule.
+usb_vid = 0x04b8
+usb_pid = 0x0e15
 
 ## Ollama settings
 [ollama]
@@ -50,8 +68,9 @@ extern crate dirs;
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     pub general: GeneralConfig,
-    pub ollama: OllamaConfig,
     pub sources: Option<SourcesConfig>,
+    pub destinations: Option<DestinationsConfig>,
+    pub ollama: OllamaConfig,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -67,6 +86,24 @@ pub struct SourcesConfig {
 #[derive(Serialize, Deserialize)]
 pub struct TelegramSourceConfig {
     pub enabled: bool,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct DestinationsConfig {
+    pub pos_printer: Option<POSDestConfig>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum POSConnectionTypes {
+    USB,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct POSDestConfig {
+    pub enabled: bool,
+    pub connection: POSConnectionTypes,
+    pub usb_pid: Option<u16>,
+    pub usb_vid: Option<u16>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -86,6 +123,7 @@ impl Config {
     pub fn load_or_default() -> Self {
         let try_load = || -> Result<Self, Error> {
             let mut path = dirs::config_dir().unwrap();
+            path.push(CONFIG_DIR);
             path.push(CONFIG_FILE);
             info!("Loading config from {}", path.display());
             let s: String = fs::read_to_string(path)?;
@@ -111,6 +149,8 @@ impl Config {
 
     pub fn create_default_config() -> Result<(), Error> {
         let mut path = dirs::config_dir().unwrap();
+        path.push(CONFIG_DIR);
+        fs::create_dir_all(path.clone())?;
         path.push(CONFIG_FILE);
         println!("Creating default config at '{}'", path.display());
         let mut file = File::create(path)?;

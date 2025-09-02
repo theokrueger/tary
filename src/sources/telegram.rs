@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::sources::SourceListener;
+use crate::sources::TarySource;
 use crate::storage::Storage;
 use log::trace;
 use std::sync::Arc;
@@ -11,8 +11,10 @@ pub struct Telegram {
     bot: Bot,
 }
 
-impl SourceListener for Telegram {
-    async fn listen(&self) {
+impl TarySource for Telegram {
+    async fn listen(self) {
+        trace!("Starting Telegram listener");
+
         teloxide::repl(self.bot.clone(), |bot: Bot, msg: Message| async move {
             bot.send_dice(msg.chat.id).await?;
             Ok(())
@@ -20,21 +22,29 @@ impl SourceListener for Telegram {
         .await;
     }
 
-    fn init(cfg: Arc<Config>, storage: Arc<Storage>) -> Self {
-        trace!("Loading telegram token");
+    fn init(cfg: Arc<Config>, storage: Arc<Storage>) -> Option<Box<Self>> {
+        if let Some(t) = &cfg.sources.as_ref().unwrap().telegram {
+            if !t.enabled {
+                return None;
+            }
+            info!("Setting up Telegram");
 
-        // teloxide requires loading token from environment.
-        let token = storage
-            .get_secret(TELEGRAM_TOKEN)
-            .expect("Telegram token not in secrets database!");
+            // teloxide requires loading token from environment.
+            trace!("Loading telegram token");
+            let token = storage
+                .get_secret(TELEGRAM_TOKEN)
+                .expect("Telegram token not in secrets database!");
 
-        unsafe {
-            std::env::set_var(TELEGRAM_TOKEN, &token);
-        }
-        assert_eq!(std::env::var(TELEGRAM_TOKEN), Ok(token.to_string()));
+            unsafe {
+                std::env::set_var(TELEGRAM_TOKEN, &token);
+            }
+            assert_eq!(std::env::var(TELEGRAM_TOKEN), Ok(token.to_string()));
 
-        Self {
-            bot: Bot::from_env(),
+            Some(Box::new(Self {
+                bot: Bot::from_env(),
+            }))
+        } else {
+            None
         }
     }
 }
