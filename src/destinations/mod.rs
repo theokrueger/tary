@@ -4,10 +4,11 @@ use pos_printer::POSPrinter;
 
 use crate::config::Config;
 use crate::storage::Storage;
+use std::error::Error;
 use std::sync::Arc;
 
 pub trait TaryDestination {
-    fn init(cfg: Arc<Config>, storage: Arc<Storage>) -> Result<Option<Box<Self>>>;
+    fn init(cfg: Arc<Config>, storage: Arc<Storage>) -> Result<Option<Box<Self>>, Box<dyn Error>>;
 }
 
 #[derive(Default)]

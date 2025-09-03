@@ -7,13 +7,6 @@ use crate::storage::Storage;
 use std::sync::Arc;
 use time::Date;
 
-pub struct Content {
-    source: String,
-    dest: Option<String>,
-    date: Date,
-    due: Option<Date>,
-}
-
 pub trait TarySource {
     async fn listen(self);
     fn init(cfg: Arc<Config>, storage: Arc<Storage>) -> Option<Box<Self>>;

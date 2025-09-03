@@ -6,6 +6,8 @@ use std::{
     fs::{self, File},
     io::{Error, ErrorKind, Write},
 };
+use teloxide::types::UserId;
+
 const CONFIG_DIR: &str = "tary";
 const CONFIG_FILE: &str = "tary.toml";
 
@@ -21,6 +23,10 @@ name = "Jane Doe"
 [sources.telegram]
 # use Telegram input?
 enabled = true
+
+# User allowed to send messages to the bot
+# Get your user id by messaging @userinfobot
+user = 1234
 
 ## (Optional) POS Printer destination
 [destinations.pos_printer]
@@ -86,6 +92,7 @@ pub struct SourcesConfig {
 #[derive(Serialize, Deserialize)]
 pub struct TelegramSourceConfig {
     pub enabled: bool,
+    pub user: Option<UserId>,
 }
 
 #[derive(Serialize, Deserialize)]
