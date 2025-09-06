@@ -22,14 +22,10 @@ enum Command {
     #[command(aliases = ["h", "?", "start"])]
     Help,
     /// Create a new TODO entry
+    /// Specify due date with [DUE:YYYY-MM-DD HH:MM]
+    /// Specify destinatioh with [DEST:Location]
     #[command(alias = "t")]
     Todo(String),
-    ///// Create a new TODO entry with a due date
-    //#[command(parse_with = "split", alias = "td", hide_aliases)]
-    //TodoDate(String),
-    ///// Create a new TODO entry with a due date and specific time
-    //#[command(parse_with = "split", alias = "tdt", hide_aliases)]
-    //TodoDateTime(String),
 }
 
 pub struct Telegram {
@@ -47,7 +43,7 @@ impl TarySource for Telegram {
                 self.allowed_user.is_none() || self.allowed_user.unwrap() == user.id
             })
             .chain(Message::filter_text())
-            .endpoint(Telegram::handler);
+            .endpoint(Self::handler);
 
         Dispatcher::builder(self.bot, schema)
             .dependencies(dptree::deps![tx])
@@ -86,16 +82,23 @@ impl TarySource for Telegram {
 
 impl Telegram {
     async fn handler(bot: Bot, tx: Sender<Content>, user: User, text: String) -> HandlerResult {
-        let cmd = Command::parse(text.as_str(), "")?;
+        let cmd = match Command::parse(text.as_str(), "") {
+            Ok(c) => c,
+            Err(e) => {
+                bot.send_message(user.id, "Invalid command formatting!")
+                    .await?;
+                return Err(e.into());
+            }
+        };
 
         info!("Telegram message received");
 
         let username: String = if let Some(n) = user.username {
-            format!("@{n}")
+            format!("Telegram - @{n}")
         } else {
             let l = user.last_name.unwrap_or("".to_string());
             format!(
-                "{f}{space}{l}",
+                "Telegram - {f}{space}{l}",
                 f = user.first_name,
                 space = if !l.is_empty() { "" } else { " " }
             )
@@ -106,12 +109,41 @@ impl Telegram {
                 bot.send_message(user.id, Command::descriptions().to_string())
                     .await?;
             }
-            Command::Todo(s) => {
-                let content = Content::new(format!("Telegram - {}", username), None, s);
-                trace!("Telegram source sending content");
-                tx.send(content).unwrap();
+            Command::Todo(mut s) => {
+                if s.is_empty() {
+                    return Ok(());
+                }
+                let mut c = Content::new(username, None);
+                // search for due
+                if let Some(i) = s.find("[DUE:")
+                    && let Some(j) = s[i..].find("]")
+                {
+                    let k = i + j;
+                    let d = &s[i + 5..k];
+                    if let Ok(ndt) = NaiveDateTime::parse_from_str(d, "%Y-%m-%d %H:%M") {
+                        c.due = Some(Local.from_local_datetime(&ndt).unwrap());
+                    } else {
+                        bot.send_message(user.id, "Invalid due date formatting!")
+                            .await?;
+                    }
+                    s = "".to_string() + &s[..i] + &s[k + 1..];
+                }
+                // search for destination
+                if let Some(i) = s.find("[DEST:")
+                    && let Some(j) = s[i..].find("]")
+                {
+                    let k = i + j;
+                    let d = &s[i + 5..k];
+                    c.dest = Some(d.to_string());
+                    s = "".to_string() + &s[..i] + &s[k + 1..];
+                }
+
+                c.content = s;
+                trace!("Telegram source sending TODO");
+                tx.send(c).unwrap();
             }
         };
+
         Ok(())
     }
 }

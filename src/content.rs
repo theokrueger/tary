@@ -11,7 +11,7 @@ pub struct Content {
 }
 
 impl Content {
-    pub fn new(src: String, date: Option<DateTime<Local>>, content: String) -> Self {
+    pub fn new(src: String, date: Option<DateTime<Local>>) -> Self {
         let d: DateTime<Local> = match date {
             Some(arg) => arg,
             None => Local::now(),
@@ -22,16 +22,7 @@ impl Content {
             dest: None,
             date: d,
             due: None,
-            content: content,
+            content: "".to_string(),
         }
-    }
-
-    pub fn dest(mut self, s: String) -> Self {
-        self.dest = Some(s);
-        self
-    }
-    pub fn due(mut self, d: DateTime<Local>) -> Self {
-        self.due = Some(d);
-        self
     }
 }

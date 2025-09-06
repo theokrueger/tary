@@ -73,7 +73,7 @@ impl TaryDestination for PosPrinter {
 
                 // title
                 printer
-                    .size(4, 3)?
+                    .size(8, 3)?
                     .justify(JustifyMode::CENTER)?
                     .underline(UnderlineMode::Double)?
                     .bold(true)?
