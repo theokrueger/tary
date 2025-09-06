@@ -1,6 +1,7 @@
 //! content created by sources and delivered to destinations
 use chrono::prelude::*;
 
+#[derive(Clone, Debug)]
 pub struct Content {
     pub source: String,
     pub dest: Option<String>,

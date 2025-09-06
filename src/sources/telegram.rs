@@ -3,11 +3,15 @@ use crate::content::Content;
 use crate::sources::TarySource;
 use crate::storage::Storage;
 use chrono::prelude::*;
+use dptree::prelude::*;
 use log::{trace, warn};
+use std::error::Error;
 use std::sync::Arc;
-use teloxide::types::{ChatId, MediaKind, MessageKind, UserId};
+use teloxide::types::{ChatId, MediaKind, MessageKind, User, UserId};
 use teloxide::{prelude::*, utils::command::BotCommands};
+use tokio::sync::broadcast::Sender;
 
+type HandlerResult = Result<(), Box<dyn Error + Send + Sync>>;
 const TELEGRAM_TOKEN: &str = "TELOXIDE_TOKEN";
 
 /// Supported Telegram source commands:
@@ -15,7 +19,7 @@ const TELEGRAM_TOKEN: &str = "TELOXIDE_TOKEN";
 #[command(rename_rule = "lowercase")]
 enum Command {
     /// Display this text.
-    #[command(aliases = ["h", "?"])]
+    #[command(aliases = ["h", "?", "start"])]
     Help,
     /// Create a new TODO entry
     #[command(alias = "t")]
@@ -34,36 +38,29 @@ pub struct Telegram {
 }
 
 impl TarySource for Telegram {
-    async fn listen(self) {
+    async fn listen(self, tx: Sender<Content>) {
         trace!("Starting Telegram listener");
 
-        teloxide::repl(self.bot.clone(), move |bot: Bot, msg: Message| async move {
-            if let Some(ref from) = msg.from {
-                if self.allowed_user.is_none() || self.allowed_user.unwrap() == from.id {
-                    if let MessageKind::Common(ref mc) = msg.kind
-                        && let MediaKind::Text(mt) = &mc.media_kind
-                    {
-                        if let Ok(cmd) = Command::parse(mt.text.as_str(), "") {
-                            handler(bot, msg, cmd).await;
-                        }
-                    }
-                } else {
-                    warn!(
-                        "Received message from {}, who is not on the whitelist!",
-                        from.id
-                    );
-                }
-            }
-            Ok(())
-        })
-        .await;
+        let schema = Update::filter_message()
+            .filter_map(|update: Update| update.from().cloned())
+            .filter(move |user: User| {
+                self.allowed_user.is_none() || self.allowed_user.unwrap() == user.id
+            })
+            .chain(Message::filter_text())
+            .endpoint(Telegram::handler);
+
+        Dispatcher::builder(self.bot, schema)
+            .dependencies(dptree::deps![tx])
+            //.enable_ctrlc_handler()
+            .build()
+            .dispatch()
+            .await;
     }
 
     fn init(cfg: Arc<Config>, storage: Arc<Storage>) -> Option<Box<Self>> {
-        if let Some(t) = &cfg.sources.as_ref().unwrap().telegram {
-            if !t.enabled {
-                return None;
-            }
+        if let Some(t) = &cfg.sources.telegram
+            && t.enabled
+        {
             info!("Setting up Telegram");
 
             // teloxide requires loading token from environment.
@@ -87,19 +84,34 @@ impl TarySource for Telegram {
     }
 }
 
-impl Telegram {}
+impl Telegram {
+    async fn handler(bot: Bot, tx: Sender<Content>, user: User, text: String) -> HandlerResult {
+        let cmd = Command::parse(text.as_str(), "")?;
 
-async fn handler(bot: Bot, msg: Message, cmd: Command) -> ResponseResult<()> {
-    info!("Telegram message received");
-    match cmd {
-        Command::Help => {
-            bot.send_message(msg.chat.id, Command::descriptions().to_string())
-                .await?;
-        }
-        Command::Todo(s) => {
-            info!("{s}");
-        }
+        info!("Telegram message received");
+
+        let username: String = if let Some(n) = user.username {
+            format!("@{n}")
+        } else {
+            let l = user.last_name.unwrap_or("".to_string());
+            format!(
+                "{f}{space}{l}",
+                f = user.first_name,
+                space = if !l.is_empty() { "" } else { " " }
+            )
+        };
+
+        match cmd {
+            Command::Help => {
+                bot.send_message(user.id, Command::descriptions().to_string())
+                    .await?;
+            }
+            Command::Todo(s) => {
+                let content = Content::new(format!("Telegram - {}", username), None, s);
+                trace!("Telegram source sending content");
+                tx.send(content).unwrap();
+            }
+        };
+        Ok(())
     }
-
-    Ok(())
 }

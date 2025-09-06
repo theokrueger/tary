@@ -13,7 +13,7 @@ mod tary_llm;
 use crate::tary_llm::TaryLLM;
 
 mod content;
-//
+use content::Content;
 
 mod sources;
 use crate::sources::Sources;
@@ -25,10 +25,9 @@ mod storage;
 use crate::storage::Storage;
 
 use clap::Parser;
-
-use std::sync::Arc;
-
 use inquire::Confirm;
+use std::sync::Arc;
+use tokio::sync::broadcast;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -58,8 +57,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let cfg = Arc::new(Config::load_or_default());
     let storage = Arc::new(Storage::new(cfg.clone()));
+
     let sources = Sources::new(cfg.clone(), storage.clone());
     let destinations = Destinations::new(cfg.clone(), storage.clone());
+
+    {
+        let sc = sources.count();
+        let dc = destinations.count();
+        if (sc <= 0 || dc <= 0) {
+            error!(
+                "You have {sc} sources and {dc} destinations enabled! You must have at least one of each."
+            );
+            std::process::exit(1);
+        }
+    }
 
     // ollama test
     let tary = TaryLLM::new(cfg.clone()).await;
@@ -80,6 +91,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // "#;
     //     println!("{}", tary.no_context_prompt(p.to_string()).await.response);
 
-    tokio::join!(sources.start());
+    let (tx, _) = broadcast::channel::<Content>(16);
+    tokio::join!(sources.start(tx.clone()), destinations.start(tx));
     Ok(())
 }

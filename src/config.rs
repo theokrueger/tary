@@ -28,6 +28,11 @@ enabled = true
 # Get your user id by messaging @userinfobot
 user = 1234
 
+## (Optional) Console destination
+[destinations.console]
+# use console output?
+enabled = true
+
 ## (Optional) POS Printer destination
 [destinations.pos_printer]
 # use POS (receipt) printer output?
@@ -74,8 +79,8 @@ extern crate dirs;
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     pub general: GeneralConfig,
-    pub sources: Option<SourcesConfig>,
-    pub destinations: Option<DestinationsConfig>,
+    pub sources: SourcesConfig,
+    pub destinations: DestinationsConfig,
     pub ollama: OllamaConfig,
 }
 
@@ -97,18 +102,24 @@ pub struct TelegramSourceConfig {
 
 #[derive(Serialize, Deserialize)]
 pub struct DestinationsConfig {
-    pub pos_printer: Option<POSDestConfig>,
+    pub console: Option<ConsoleDestConfig>,
+    pub pos_printer: Option<PosDestConfig>,
 }
 
 #[derive(Serialize, Deserialize)]
-pub enum POSConnectionTypes {
+pub struct ConsoleDestConfig {
+    pub enabled: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub enum PosConnectionTypes {
     USB,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct POSDestConfig {
+pub struct PosDestConfig {
     pub enabled: bool,
-    pub connection: POSConnectionTypes,
+    pub connection: PosConnectionTypes,
     pub usb_pid: Option<u16>,
     pub usb_vid: Option<u16>,
 }
