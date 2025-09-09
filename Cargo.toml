@@ -20,5 +20,4 @@ securestore = "0.100.0"
 escpos = { version = "0.16.0", features = ["full"] }
 nusb = "0.2.0"
 time = "0.3.43"
-send_wrapper = { version = "0.6.0", features = ["futures"] }
 

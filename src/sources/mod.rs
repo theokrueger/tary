@@ -7,7 +7,6 @@ use crate::content::Content;
 use crate::config::Config;
 use crate::storage::Storage;
 use std::sync::Arc;
-use time::Date;
 use tokio::sync::broadcast::Sender;
 
 pub trait TarySource {

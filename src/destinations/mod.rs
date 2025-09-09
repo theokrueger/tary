@@ -10,7 +10,6 @@ use crate::content::Content;
 use crate::storage::Storage;
 use std::error::Error;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tokio::sync::broadcast::{Receiver, Sender};
 
 macro_rules! spawn_into_vec {

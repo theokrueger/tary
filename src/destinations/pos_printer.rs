@@ -7,10 +7,9 @@ use escpos::printer::Printer;
 use escpos::printer_options::PrinterOptions;
 use escpos::utils::*;
 use log::trace;
-use send_wrapper::SendWrapper;
 use std::error::Error;
 use std::sync::Arc;
-use tokio::sync::broadcast::{Receiver, Sender};
+use tokio::sync::broadcast::Receiver;
 
 pub struct PosPrinter {
     connection_type: Pct,
@@ -18,7 +17,7 @@ pub struct PosPrinter {
 }
 
 impl TaryDestination for PosPrinter {
-    fn init(cfg: Arc<Config>, storage: Arc<Storage>) -> Result<Option<Box<Self>>, Box<dyn Error>> {
+    fn init(cfg: Arc<Config>, _storage: Arc<Storage>) -> Result<Option<Box<Self>>, Box<dyn Error>> {
         if let Some(p) = &cfg.destinations.pos_printer
             && p.enabled
         {
@@ -83,7 +82,7 @@ impl TaryDestination for PosPrinter {
                 printer
                     .feed()?
                     .size(2, 1)?
-                    .justify(JustifyMode::LEFT)?
+                    .justify(JustifyMode::CENTER)?
                     .underline(UnderlineMode::None)?
                     .bold(false)?
                     .writeln(content.source.as_str())?;
@@ -126,7 +125,7 @@ impl TaryDestination for PosPrinter {
 
                 // content
                 printer
-                    .reset_size()?
+                    .size(1, 2)?
                     .feed()?
                     .justify(JustifyMode::LEFT)?
                     .underline(UnderlineMode::None)?

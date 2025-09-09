@@ -5,12 +5,12 @@ use crate::storage::Storage;
 use log::trace;
 use std::error::Error;
 use std::sync::Arc;
-use tokio::sync::broadcast::{Receiver, Sender};
+use tokio::sync::broadcast::Receiver;
 
 pub struct Console {}
 
 impl TaryDestination for Console {
-    fn init(cfg: Arc<Config>, storage: Arc<Storage>) -> Result<Option<Box<Self>>, Box<dyn Error>> {
+    fn init(cfg: Arc<Config>, _storage: Arc<Storage>) -> Result<Option<Box<Self>>, Box<dyn Error>> {
         if let Some(c) = &cfg.destinations.console
             && c.enabled
         {

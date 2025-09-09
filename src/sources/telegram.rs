@@ -3,11 +3,10 @@ use crate::content::Content;
 use crate::sources::TarySource;
 use crate::storage::Storage;
 use chrono::prelude::*;
-use dptree::prelude::*;
-use log::{trace, warn};
+use log::trace;
 use std::error::Error;
 use std::sync::Arc;
-use teloxide::types::{ChatId, MediaKind, MessageKind, User, UserId};
+use teloxide::types::{User, UserId};
 use teloxide::{prelude::*, utils::command::BotCommands};
 use tokio::sync::broadcast::Sender;
 
@@ -21,11 +20,17 @@ enum Command {
     /// Display this text.
     #[command(aliases = ["h", "?", "start"])]
     Help,
+    /// Pong
+    #[command(aliases = ["p"])]
+    Ping,
     /// Create a new TODO entry
     /// Specify due date with [DUE:YYYY-MM-DD HH:MM]
     /// Specify destinatioh with [DEST:Location]
     #[command(alias = "t")]
     Todo(String),
+    /// Create a new TODO entry where the text gets summarised
+    #[command(alias = "ts")]
+    TodoSummary(String),
 }
 
 pub struct Telegram {
@@ -109,17 +114,21 @@ impl Telegram {
                 bot.send_message(user.id, Command::descriptions().to_string())
                     .await?;
             }
-            Command::Todo(mut s) => {
+            Command::Ping => {
+                bot.send_message(user.id, "Pong".to_string()).await?;
+            }
+            Command::Todo(mut s) | Command::TodoSummary(mut s) => {
                 if s.is_empty() {
                     return Ok(());
                 }
                 let mut c = Content::new(username, None);
                 // search for due
-                if let Some(i) = s.find("[DUE:")
+                let duekey = "[DUE:";
+                if let Some(i) = s.find(duekey)
                     && let Some(j) = s[i..].find("]")
                 {
                     let k = i + j;
-                    let d = &s[i + 5..k];
+                    let d = &s[i + duekey.len()..k];
                     if let Ok(ndt) = NaiveDateTime::parse_from_str(d, "%Y-%m-%d %H:%M") {
                         c.due = Some(Local.from_local_datetime(&ndt).unwrap());
                     } else {
@@ -129,11 +138,12 @@ impl Telegram {
                     s = "".to_string() + &s[..i] + &s[k + 1..];
                 }
                 // search for destination
-                if let Some(i) = s.find("[DEST:")
+                let destkey = "[DEST:";
+                if let Some(i) = s.find(destkey)
                     && let Some(j) = s[i..].find("]")
                 {
                     let k = i + j;
-                    let d = &s[i + 5..k];
+                    let d = &s[i + destkey.len()..k];
                     c.dest = Some(d.to_string());
                     s = "".to_string() + &s[..i] + &s[k + 1..];
                 }

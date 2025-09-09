@@ -64,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let sc = sources.count();
         let dc = destinations.count();
-        if (sc <= 0 || dc <= 0) {
+        if sc <= 0 || dc <= 0 {
             error!(
                 "You have {sc} sources and {dc} destinations enabled! You must have at least one of each."
             );
