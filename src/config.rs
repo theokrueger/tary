@@ -73,6 +73,19 @@ Your directives are as follows:
 
 "#;
 
+const MINIMAL_CONFIG: &str = r#"# Minimal tary config.
+# This is the bare minimum config to get tary running.
+# No sources or destinations are enabled, so the program does basically nothing.
+# Reset this config by running `tary --create-minimal-config`
+[general]
+name = "Jane Doe"
+
+[ollama]
+address = "127.0.0.1"
+port = 11434
+model = "gemma3:4b"
+"#;
+
 extern crate dirs;
 
 /// Root of config
@@ -173,6 +186,17 @@ impl Config {
         println!("Creating default config at '{}'", path.display());
         let mut file = File::create(path)?;
         file.write_all(DEFAULT_CONFIG.as_bytes())?;
+        Ok(())
+    }
+
+    pub fn create_minimal_config() -> Result<(), Error> {
+        let mut path = dirs::config_dir().unwrap();
+        path.push(CONFIG_DIR);
+        fs::create_dir_all(path.clone())?;
+        path.push(CONFIG_FILE);
+        println!("Creating minimal config at '{}'", path.display());
+        let mut file = File::create(path)?;
+        file.write_all(MINIMAL_CONFIG.as_bytes())?;
         Ok(())
     }
 }

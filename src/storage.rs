@@ -15,7 +15,7 @@ pub struct Storage {
 }
 
 impl Storage {
-    pub fn new(cfg: Arc<Config>) -> Self {
+    pub fn new(_cfg: Arc<Config>) -> Self {
         let mut storage_folder = dirs::data_dir().unwrap();
         storage_folder.push(STORAGE_FOLDER);
 

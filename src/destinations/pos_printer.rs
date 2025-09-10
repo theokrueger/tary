@@ -14,6 +14,7 @@ use tokio::sync::broadcast::Receiver;
 pub struct PosPrinter {
     connection_type: Pct,
     usb_driver: Option<Box<NativeUsbDriver>>,
+    usb_id: Option<(u16, u16)>,
 }
 
 impl TaryDestination for PosPrinter {
@@ -26,6 +27,7 @@ impl TaryDestination for PosPrinter {
             let mut pos = Self {
                 connection_type: p.connection.clone(),
                 usb_driver: None,
+                usb_id: None,
             };
 
             match p.connection {
@@ -36,10 +38,8 @@ impl TaryDestination for PosPrinter {
                     let pid: u16 = p
                         .usb_pid
                         .expect("USB PID Not specified, but USB connection type is selected!");
-                    pos.usb_driver = Some(Box::new(
-                        NativeUsbDriver::open(vid, pid)
-                            .expect(format!("Unable to open USB device {vid:x}:{pid:x}!").as_str()),
-                    ));
+                    pos.usb_id = Some((vid, pid));
+                    pos.init_usb().expect("Unable to init USB");
                 }
             };
 
@@ -137,11 +137,27 @@ impl TaryDestination for PosPrinter {
             }
         };
 
+        // do the print, reinit usb on failure
         match f().await {
-            Ok(_) => {}
-            Err(e) => error!("Error {e} in printing to pos_printer, aborting this destination!"),
-        }
+            Ok(_) => return,
+            Err(e) => {
+                error!("Error {e} in printing to pos_printer, aborting this print!");
+            }
+        };
     }
 }
 
-impl PosPrinter {}
+impl PosPrinter {
+    fn init_usb(&mut self) -> Result<(), Box<dyn Error>> {
+        if self.usb_driver.is_some() {
+            self.usb_driver = None;
+            // previous usb_driver gets dropped
+        }
+        let (vid, pid) = self.usb_id.expect("No USB pid and vid specified");
+        self.usb_driver = Some(Box::new(
+            NativeUsbDriver::open(vid, pid)
+                .expect(format!("Unable to open USB device {vid:x}:{pid:x}!").as_str()),
+        ));
+        Ok(())
+    }
+}

@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = Args::parse();
 
-    if args.create_config {
+    if args.create_config || args.create_minimal_config {
         let ans = Confirm::new(
             "Creating a new config will overwrite any existing configuration. Continue?",
         )
@@ -45,9 +45,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         match ans {
             Ok(true) => {
-                Config::create_default_config().unwrap_or_else(|e| {
-                    println!("Unable to save default configuration: {e}");
-                });
+                if args.create_config {
+                    Config::create_default_config().unwrap_or_else(|e| {
+                        println!("Unable to save default configuration: {e}");
+                    });
+                } else if args.create_minimal_config {
+                    Config::create_minimal_config().unwrap_or_else(|e| {
+                        println!("Unable to save minimal configuration: {e}");
+                    });
+                }
             }
             Ok(false) => println!("Configuration NOT overwritten."),
             Err(e) => println!("{e}"),
