@@ -12,7 +12,7 @@ const CONFIG_DIR: &str = "tary";
 const CONFIG_FILE: &str = "tary.toml";
 
 const DEFAULT_CONFIG: &str = r#"# Default tary config.
-# Reset your configuration by running `tary --create-config`
+# Reset this configuration by running `tary --create-config`
 
 ## General settings
 [general]
@@ -22,11 +22,11 @@ name = "Jane Doe"
 ## (Optional) Telegram settings
 [sources.telegram]
 # use Telegram input?
-enabled = true
+enabled = false
 
 # User allowed to send messages to the bot
 # Get your user id by messaging @userinfobot
-user = 1234
+user = 7832026168
 
 ## (Optional) Console destination
 [destinations.console]
@@ -36,7 +36,7 @@ enabled = true
 ## (Optional) POS Printer destination
 [destinations.pos_printer]
 # use POS (receipt) printer output?
-enabled = true
+enabled = false
 
 # Printer connection type
 # Options: USB

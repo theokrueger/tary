@@ -25,7 +25,8 @@ impl TaryDestination for Console {
             let content = rx.recv().await.unwrap();
             trace!("Console dest received content");
             println!(
-                "Date: {date}\nFrom: {from}\nDue: {due}\nDestination: {dest} \n\t{text}",
+                "[{ctype}] Date: {date}\nFrom: {from}\nDue: {due}\nDestination: {dest} \n\t{text}",
+                ctype = content.content_type,
                 date = content.date,
                 from = content.source,
                 due = content

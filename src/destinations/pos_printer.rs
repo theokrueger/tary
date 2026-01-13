@@ -76,7 +76,7 @@ impl TaryDestination for PosPrinter {
                     .justify(JustifyMode::CENTER)?
                     .underline(UnderlineMode::Double)?
                     .bold(true)?
-                    .writeln("TODO")?;
+                    .writeln(format!("{}", content.content_type).as_str())?;
 
                 // source
                 printer

@@ -97,7 +97,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // "#;
     //     println!("{}", tary.no_context_prompt(p.to_string()).await.response);
 
-    let (tx, _) = broadcast::channel::<Content>(16);
+    let (tx, _) = broadcast::channel::<Content>(64); // absurd 64
     tokio::join!(sources.start(tx.clone()), destinations.start(tx));
     Ok(())
 }

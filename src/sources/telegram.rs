@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::content::Content;
+use crate::content::{Content, ContentType};
 use crate::sources::TarySource;
 use crate::storage::Storage;
 use chrono::prelude::*;
@@ -121,7 +121,7 @@ impl Telegram {
                 if s.is_empty() {
                     return Ok(());
                 }
-                let mut c = Content::new(username, None);
+                let mut c = Content::new(ContentType::Todo, username, None);
                 // search for due
                 let duekey = "[DUE:";
                 if let Some(i) = s.find(duekey)
