@@ -1,56 +1,36 @@
 * Tary
+...Is an easy way to organize your life.
+Content comes in from sources, get transformed by middleware, and routed to destinations.
 
 ** Quick Start
-Tary requires [[https://github.com/ollama/ollama][Ollama]] to be installed to work.
 #+BEGIN_SRC bash
-  # Install tary
   cargo install tary
-  # Create the default config
   tary --create-config
-  # Edit it to your liking
   nano ~/.config/tary/tary.toml
-  # Run ollama
-  ollama serve &
-  # Run tary
   tary
 #+END_SRC
 
-See [[Storing Tokens]], [[Managing Sources]], and [[Managing Destinations]] for info on setting up sources and destinations to your liking.
-
-** Storing Tokens
-Tary uses [[https://docs.rs/securestore/latest/securestore/][ssclient]] for key generation and encryption
-
-To create a new key in the default location:
-#+BEGIN_SRC bash
-  cargo install ssclient
-  mkdir -p ~/.local/share/tary/
-  cd ~/.local/share/tary/
-  ssclient create secrets.json --export-key secrets.key
-  # Type your password
-#+END_SRC
-It is the user's responsibility to keep `secrets.key` safe. It is how Tary opens the secrets database.
+See [[Managing Sources]], [[Managing Middleware]] and [[Managing Destinations]] for info on setting up tary to your liking.
 
 ** Managing Sources
 Adding and enabling or disabling sources:
 
-*** Telegram
-1. Create a new bot using [[https://t.me/botfather][@Botfather]] to get a token in the format `123456789:blablabla`
-
-2. Add the token to Tary's secrets store
-#+BEGIN_SRC bash
-  cd ~/.local/share/tary/
-  ssclient set TELOXIDE_TOKEN
-  # Type your password
-  # Paste the token
-#+END_SRC
-
-3. Ensure telegram is enabled in `tary.toml`
+*** HTTP API/WebUI
+1. Enable in config
 #+BEGIN_SRC toml
-  # ~/.config/tary/tary.toml
-  [sources.telegram]
+  [sources.http_server]
   enabled = true
+  host = "127.0.0.1"
+  port = 80
+  # html_path = "/path/to/index.html"  
 #+END_SRC
 
+If ~html_path~ is not specified, a default WebUI will be used.
+
+** Managing Middleware
+Adding and enabling or disabling Middleware
+
+*** TODO
 
 ** Managing destinations
 Adding and enabling or disabling destinations:
