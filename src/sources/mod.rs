@@ -34,7 +34,7 @@ impl Sources {
         }
     }
 
-    pub fn count(&self) -> u32 {
-        self.http_server.is_some() as u32
+    pub fn count(&self) -> usize {
+        self.http_server.is_some() as usize
     }
 }

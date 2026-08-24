@@ -43,7 +43,7 @@ impl Destinations {
         }
     }
 
-    pub fn count(&self) -> u32 {
-        self.pos_printer.is_some() as u32 + self.console.is_some() as u32
+    pub fn count(&self) -> usize {
+        self.pos_printer.is_some() as usize + self.console.is_some() as usize
     }
 }

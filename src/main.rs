@@ -2,17 +2,19 @@ mod args;
 mod config;
 mod content;
 mod destinations;
+mod middlewares;
 mod sources;
 
 use crate::args::Args;
 use crate::config::Config;
 use crate::content::Content;
 use crate::destinations::Destinations;
+use crate::middlewares::Middlewares;
 use crate::sources::Sources;
 
 use clap::Parser;
 use inquire::Confirm;
-use log::{error, trace};
+use log::{error, info, trace};
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
@@ -50,19 +52,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cfg = Arc::new(Config::load_or_default());
 
     let sources = Sources::new(cfg.clone());
-    let destinations = Destinations::new(cfg.clone());
+    let sc = sources.count();
+    info!("Loaded {sc} sources");
 
-    {
-        let sc = sources.count();
-        let dc = destinations.count();
-        if sc == 0 || dc == 0 {
-            error!(
-                "You have {sc} sources and {dc} destinations enabled! You must have at least one of each."
-            );
-            std::process::exit(1);
-        }
+    let middlewares = Middlewares::new(cfg.clone());
+    let mc = middlewares.count();
+    info!("Loaded {mc} middlewares");
+
+    let destinations = Destinations::new(cfg.clone());
+    let dc = destinations.count();
+    info!("Loaded {dc} destinations");
+
+    if sc == 0 || dc == 0 {
+        error!(
+            "You have {sc} sources and {dc} destinations enabled! You must have at least one of each."
+        );
+        std::process::exit(1);
     }
 
+    info!("Starting tary");
     let (tx, _) = broadcast::channel::<Content>(64); // absurd 64
     tokio::join!(sources.start(tx.clone()), destinations.start(tx));
     Ok(())
