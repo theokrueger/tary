@@ -1,13 +1,18 @@
 image: rust:latest
 
+before_script:
+  - apt-get update
+  - apt-get install -y libudev-dev
+
 lint:
   script:
-    - sudo apt install libudev-dev
     - cargo check --verbose
-    - cargo clippy --all-targets --all-features --keep-going
+    - cargo clippy --all-targets --all-features --keep-going -D warnings
 
 build:
   script:
-    - sudo apt install libudev-dev
     - cargo build --verbose
+
+test:
+  script:
     - cargo test --verbose
