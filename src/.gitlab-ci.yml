@@ -1,0 +1,17 @@
+stages:
+  - lint
+  - build
+
+lint-stable:
+  stage: lint
+  image: rust:latest
+  script:
+    - cargo check --verbose
+    - cargo clippy --all-targets --all-features --keep-going
+
+build-stable:
+  stage: build
+  image: rust:latest
+  script:
+    - cargo build --verbose
+    - cargo test --verbose
