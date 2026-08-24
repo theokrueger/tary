@@ -1,36 +1,34 @@
-extern crate pretty_env_logger;
-
-#[macro_use]
-extern crate log;
-
-mod config;
-use crate::config::Config;
-
 mod args;
-use crate::args::Args;
-
+mod config;
 mod content;
-use content::Content;
-
-mod sources;
-use crate::sources::Sources;
-
 mod destinations;
+mod sources;
+
+use crate::args::Args;
+use crate::config::Config;
+use crate::content::Content;
 use crate::destinations::Destinations;
+use crate::sources::Sources;
 
 use clap::Parser;
 use inquire::Confirm;
+use log::{error, info};
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    if std::env::var("RUST_LOG").is_err() {
+        unsafe {
+            std::env::set_var("RUST_LOG", "warn");
+        }
+    }
     pretty_env_logger::init();
-    trace!("Starting Tary");
+    info!("Starting Tary");
 
     let args = Args::parse();
 
-    if args.create_config || args.create_minimal_config {
+    if args.create_config {
         let ans = Confirm::new(
             "Creating a new config will overwrite any existing configuration. Continue?",
         )
@@ -39,14 +37,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         match ans {
             Ok(true) => {
-                if args.create_config {
-                    Config::create_default_config().unwrap_or_else(|e| {
-                        println!("Unable to save default configuration: {e}");
-                    });
-                } else if args.create_minimal_config {
-                    Config::create_minimal_config().unwrap_or_else(|e| {
-                        println!("Unable to save minimal configuration: {e}");
-                    });
+                if let Err(e) = Config::create_default_config() {
+                    println!("Unable to save default configuration: {e}");
                 }
             }
             Ok(false) => println!("Configuration NOT overwritten."),
@@ -63,7 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         let sc = sources.count();
         let dc = destinations.count();
-        if sc <= 0 || dc <= 0 {
+        if sc == 0 || dc == 0 {
             error!(
                 "You have {sc} sources and {dc} destinations enabled! You must have at least one of each."
             );

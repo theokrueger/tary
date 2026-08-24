@@ -1,20 +1,17 @@
 //! content created by sources and delivered to destinations
-use chrono::prelude::*;
+use chrono::{DateTime, Local};
 use std::fmt;
 
 #[derive(Clone, Debug)]
 pub enum ContentType {
     Todo,
 }
+
 impl fmt::Display for ContentType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                ContentType::Todo => "TODO",
-            }
-        )
+        match self {
+            ContentType::Todo => f.write_str("TODO"),
+        }
     }
 }
 
@@ -30,18 +27,13 @@ pub struct Content {
 
 impl Content {
     pub fn new(ctype: ContentType, src: String, date: Option<DateTime<Local>>) -> Self {
-        let d: DateTime<Local> = match date {
-            Some(arg) => arg,
-            None => Local::now(),
-        };
-
         Self {
             content_type: ctype,
             source: src,
             dest: None,
-            date: d,
+            date: date.unwrap_or_else(Local::now),
             due: None,
-            content: "".to_string(),
+            content: String::new(),
         }
     }
 }

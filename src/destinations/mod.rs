@@ -1,23 +1,14 @@
 //! Handler for outputs
-mod pos_printer;
-use pos_printer::PosPrinter;
-
 mod console;
+mod pos_printer;
 use console::Console;
+use pos_printer::PosPrinter;
 
 use crate::config::Config;
 use crate::content::Content;
 use std::error::Error;
 use std::sync::Arc;
 use tokio::sync::broadcast::{Receiver, Sender};
-
-macro_rules! spawn_into_vec {
-    ($obj:expr, $vec:ident, $tx:ident) => {
-        if let Some(t) = $obj {
-            $vec.push(tokio::spawn(t.listen($tx.subscribe())));
-        }
-    };
-}
 
 pub trait TaryDestination {
     fn init(cfg: Arc<Config>) -> Result<Option<Box<Self>>, Box<dyn Error>>;
@@ -34,7 +25,7 @@ impl Destinations {
     pub fn new(cfg: Arc<Config>) -> Self {
         Self {
             pos_printer: PosPrinter::init(cfg.clone())
-                .expect("Failed to init POS printer destinagion"),
+                .expect("Failed to init POS printer destination"),
             console: Console::init(cfg.clone()).expect("Failed to init console destination"),
         }
     }
@@ -42,8 +33,12 @@ impl Destinations {
     pub async fn start(self, tx: Sender<Content>) {
         let mut handles = Vec::new();
 
-        spawn_into_vec!(self.pos_printer, handles, tx);
-        spawn_into_vec!(self.console, handles, tx);
+        if let Some(dest) = self.pos_printer {
+            handles.push(tokio::spawn(dest.listen(tx.subscribe())));
+        }
+        if let Some(dest) = self.console {
+            handles.push(tokio::spawn(dest.listen(tx.subscribe())));
+        }
 
         for handle in handles {
             handle.await.unwrap();
@@ -51,6 +46,6 @@ impl Destinations {
     }
 
     pub fn count(&self) -> u32 {
-        0 + self.pos_printer.is_some() as u32 + self.console.is_some() as u32
+        self.pos_printer.is_some() as u32 + self.console.is_some() as u32
     }
 }

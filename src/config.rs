@@ -4,7 +4,7 @@ use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File},
-    io::{Error, ErrorKind, Write},
+    io::{Error, Write},
 };
 
 const CONFIG_DIR: &str = "tary";
@@ -18,18 +18,32 @@ const DEFAULT_CONFIG: &str = r#"# Default tary config.
 # Your username
 name = "Jane Doe"
 
+## (Optional) HTTP server source
+[sources.http_server]
+# use HTTP server as an input source?
+enabled = true
+# bind address
+host = "127.0.0.1"
+# bind port
+port = 3000
+
+# (Optional) path to a custom HTML file served on '/'.
+# If not specified, a default HTML page is served.
+# html_path = "/path/to/index.html"
+
 ## (Optional) Console destination
 [destinations.console]
 # use console output?
 enabled = true
+# (Optional) where to output to? (do not specify for stdout)
+output = "/tmp/tary.log"
 
 ## (Optional) POS Printer destination
 [destinations.pos_printer]
 # use POS (receipt) printer output?
 enabled = false
 
-# Printer connection type
-# Options: USB
+# Printer connection type: "USB"
 connection = "USB"
 
 # (Optional, required for USB connection type)
@@ -41,23 +55,13 @@ usb_vid = 0x0fe6
 usb_pid = 0x811e
 "#;
 
-const MINIMAL_CONFIG: &str = r#"# Minimal tary config.
-# This is the bare minimum config to get tary running.
-# No sources or destinations are enabled, so the program does basically nothing.
-# Reset this config by running `tary --create-minimal-config`
-[general]
-name = "Jane Doe"
-"#;
-
-extern crate dirs;
-
 /// Root of config
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     pub general: GeneralConfig,
+    #[serde(default)]
     pub sources: SourcesConfig,
     pub destinations: DestinationsConfig,
-    pub ollama: OllamaConfig,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -65,8 +69,18 @@ pub struct GeneralConfig {
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct SourcesConfig {}
+#[derive(Serialize, Deserialize, Default)]
+pub struct SourcesConfig {
+    pub http_server: Option<HttpServerConfig>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Default)]
+pub struct HttpServerConfig {
+    pub enabled: bool,
+    pub host: String,
+    pub port: u16,
+    pub html_path: Option<String>,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct DestinationsConfig {
@@ -77,11 +91,13 @@ pub struct DestinationsConfig {
 #[derive(Serialize, Deserialize)]
 pub struct ConsoleDestConfig {
     pub enabled: bool,
+    pub output: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum PosConnectionTypes {
-    USB,
+    #[serde(rename = "USB")]
+    Usb,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -92,17 +108,9 @@ pub struct PosDestConfig {
     pub usb_pid: Option<u16>,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct OllamaConfig {
-    pub model: String,
-    pub system_prompt: Option<String>,
-    pub address: String,
-    pub port: u16,
-}
-
 impl Config {
-    fn default() -> Self {
-        toml::from_str(&DEFAULT_CONFIG).unwrap()
+    fn default_config() -> Self {
+        toml::from_str(DEFAULT_CONFIG).unwrap()
     }
 
     /// load from CONFIG_FILE, use defaults if failure
@@ -112,21 +120,16 @@ impl Config {
             path.push(CONFIG_DIR);
             path.push(CONFIG_FILE);
             info!("Loading config from {}", path.display());
-            let s: String = fs::read_to_string(path)?;
-            let cfg: Config = toml::from_str(&s).or_else(|e| -> Result<Self, Error> {
-                Err(Error::new(
-                    ErrorKind::Other,
-                    format!("Unable to deserialize config: {e}"),
-                ))
-            })?;
-            Ok(cfg)
+            let s = fs::read_to_string(path)?;
+            toml::from_str(&s)
+                .map_err(|e| Error::other(format!("Unable to deserialize config: {e}")))
         };
 
         match try_load() {
             Ok(c) => c,
             Err(e) => {
                 error!("Failed loading from config file: {e}\nUsing default settings.");
-                let cfg = Self::default();
+                let cfg = Self::default_config();
                 info!("Using config:\n{}", toml::to_string(&cfg).unwrap());
                 cfg
             }
@@ -141,17 +144,6 @@ impl Config {
         println!("Creating default config at '{}'", path.display());
         let mut file = File::create(path)?;
         file.write_all(DEFAULT_CONFIG.as_bytes())?;
-        Ok(())
-    }
-
-    pub fn create_minimal_config() -> Result<(), Error> {
-        let mut path = dirs::config_dir().unwrap();
-        path.push(CONFIG_DIR);
-        fs::create_dir_all(path.clone())?;
-        path.push(CONFIG_FILE);
-        println!("Creating minimal config at '{}'", path.display());
-        let mut file = File::create(path)?;
-        file.write_all(MINIMAL_CONFIG.as_bytes())?;
         Ok(())
     }
 }

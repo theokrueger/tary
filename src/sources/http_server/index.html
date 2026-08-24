@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tary — your secreTary</title>
+  <style>
+    * { font-family: monospace; }
+    body { max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { color: #333; }
+    form { display: grid; gap: 0.75rem; }
+    label { font-weight: bold; }
+    input, button, textarea { padding: 0.5rem; font-size: 1rem; box-sizing: border-box; }
+    input, textarea { width: 100%; }
+    textarea { min-height: 8rem; resize: vertical; }
+    button { cursor: pointer; }
+    .status { padding: 0.5rem; margin-top: 0.5rem; }
+    .status.ok { background: #d4edda; color: #155724; }
+    .status.error { background: #f8d7da; color: #721c24; }
+    .preset-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .preset-row button { flex: 1; min-width: 80px; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <span style="display:flex; flex-wrap: none; gap: 0.5rem;">
+    <h1>Tary</h1>
+    <p style="margin: auto 0 auto auto; order: 2;">Submit a new TODO item.</p>
+  </span>
+  <form id="todo-form">
+    <div>
+      <label for="content">Content *</label>
+      <textarea id="content" name="content" required></textarea>
+    </div>
+    <div>
+      <label for="due">Due date</label>
+      <span style="display: flex; flex-wrap: none; gap: 0.5rem;">
+	<input id="due" name="due" type="datetime-local" step="1">
+	<button type="button" onclick="form.reset()">Reset</button>
+      </span>
+    </div>
+    <div class="preset-row">
+      <button type="button" onclick="setDue('now')">Now</button>
+      <button type="button" onclick="setDue('noon')">Noon</button>
+      <button type="button" onclick="setDue('eobd')">EOBD</button>
+      <button type="button" onclick="setDue('eod')">EOD</button>
+      <button type="button" onclick="setDue('eow')">EOW</button>
+      <button type="button" onclick="setDue('eom')">EOM</button>
+    </div>
+    <div>
+      <label for="dest">Destination</label>
+      <input id="dest" name="dest" type="text" placeholder="Where this gets completed.">
+    </div>
+    <button type="submit">Submit</button>
+  </form>
+  <div id="result" class="status" style="display:none;"></div>
+  <script>
+    const form = document.getElementById('todo-form');
+    const result = document.getElementById('result');
+
+    const pad = n => n.toString().padStart(2, '0');
+
+    function fmtLocal(d) {
+      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+             'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    }
+
+    // Convert a Date to an RFC 3339 string with timezone offset.
+    function toRfc3339(d) {
+      const offsetMin = -d.getTimezoneOffset();
+      const sign = offsetMin >= 0 ? '+' : '-';
+      const abs = Math.abs(offsetMin);
+      const offset = sign + pad(Math.floor(abs / 60)) + ':' + pad(abs % 60);
+      return fmtLocal(d) + offset;
+    }
+
+    function getBaseDate() {
+      const val = document.getElementById('due').value;
+      if (val) {
+        const parsed = new Date(val);
+        if (!isNaN(parsed.getTime())) {
+          return parsed;
+        }
+      }
+      return new Date();
+    }
+
+    function setDue(preset) {
+      let now = new Date();
+      let d = getBaseDate();
+      if (preset == 'now') {
+        d = now;
+      } else if (preset === 'eod') {
+        d.setHours(23, 59, 59, 0);
+      } else if (preset === 'eow') {
+        const dayOfWeek = d.getDay();
+        const daysUntilSunday = (7 - dayOfWeek) % 7;
+        d.setDate(d.getDate() + daysUntilSunday);
+        d.setHours(23, 59, 59, 0);
+      } else if (preset === 'noon') {
+        d.setHours(12, 0, 0, 0);
+      } else if (preset === 'eobd') {
+        d.setHours(17, 0, 0, 0);
+      } else if (preset === 'eom') {
+        d = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
+      }
+      if (d != now && now > d) {
+        d.setDate(d.getDate() + 1);
+      }
+      document.getElementById('due').value = fmtLocal(d);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const flavours = [
+        "Touch some grass.",
+        "Finish a project.",
+        "Eat some dirt.",
+        "Tip the landlord.",
+        "Leave the house.",
+        "Go to bed.",
+        "Beg for forgiveness.",
+        "Create a TODO.",
+        "Do business at the stock market.",
+        "Do nothing.",
+        "Forgive yourself.",
+      ];
+      document.getElementById('content').placeholder = flavours[Math.floor(Math.random() * flavours.length)];
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const content = document.getElementById('content').value;
+      const destInput = document.getElementById('dest').value;
+      const dueInput = document.getElementById('due').value;
+
+      let due = null;
+      if (dueInput) {
+        const parsed = new Date(dueInput);
+        if (!isNaN(parsed.getTime())) {
+          due = toRfc3339(parsed);
+        }
+      }
+
+      const body = { content };
+      if (destInput) body.dest = destInput;
+      if (due) body.due = due;
+
+      try {
+        const resp = await fetch('/todo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (resp.ok) {
+          result.textContent = 'Submitted!';
+          result.className = 'status ok';
+          result.style.display = 'block';
+          form.reset();
+        } else {
+          result.textContent = resp.status + ' ' + resp.statusText;
+          result.className = 'status error';
+          result.style.display = 'block';
+        }
+      } catch (err) {
+        result.textContent = 'Error: ' + err.message;
+        result.className = 'status error';
+        result.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
