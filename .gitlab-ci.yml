@@ -2,10 +2,12 @@ image: rust:latest
 
 lint:
   script:
+    - sudo apt install libudev-dev
     - cargo check --verbose
     - cargo clippy --all-targets --all-features --keep-going
 
 build:
   script:
+    - sudo apt install libudev-dev
     - cargo build --verbose
     - cargo test --verbose

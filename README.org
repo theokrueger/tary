@@ -3,6 +3,7 @@
 Content comes in from sources, get transformed by middleware, and routed to destinations.
 
 ** Quick Start
+Install `libudev` (i.e. `sudo apt install libudev-dev` on Debian).
 #+BEGIN_SRC bash
   cargo install tary
   tary --create-config
