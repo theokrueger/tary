@@ -3,10 +3,10 @@ image: rust:latest
 before_script:
   - apt-get update
   - apt-get install -y libudev-dev
+  - rustup component add clippy
 
 lint:
   script:
-    - cargo check --verbose
     - cargo clippy --all-targets --all-features --keep-going -D warnings
 
 build:

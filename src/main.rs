@@ -71,7 +71,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     info!("Starting tary");
-    let (tx, _) = broadcast::channel::<Content>(64); // absurd 64
-    tokio::join!(sources.start(tx.clone()), destinations.start(tx));
+    let (txin, _) = broadcast::channel::<Content>(4);
+    let (txout, _) = broadcast::channel::<Content>(4);
+    tokio::join!(
+        sources.start(txin.clone()),
+        middlewares.start(txin.subscribe(), txout.clone()),
+        destinations.start(txout)
+    );
     Ok(())
 }

@@ -17,12 +17,10 @@ impl Middlewares {
         Self {}
     }
 
-    pub async fn start(self, tx: Sender<Content>) {
-        // let mut handles = Vec::new();
-
-        // for handle in handles {
-        //     handle.await.unwrap();
-        // }
+    pub async fn start(self, mut rx: Receiver<Content>, tx: Sender<Content>) {
+        loop {
+            tx.send(rx.recv().await.unwrap()).unwrap();
+        }
     }
 
     pub fn count(&self) -> usize {
