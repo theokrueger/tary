@@ -12,7 +12,7 @@ use crate::sources::Sources;
 
 use clap::Parser;
 use inquire::Confirm;
-use log::{error, info};
+use log::{error, trace};
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
@@ -20,11 +20,11 @@ use tokio::sync::broadcast;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if std::env::var("RUST_LOG").is_err() {
         unsafe {
-            std::env::set_var("RUST_LOG", "warn");
+            std::env::set_var("RUST_LOG", "INFO");
         }
     }
     pretty_env_logger::init();
-    info!("Starting Tary");
+    trace!("Starting Tary");
 
     let args = Args::parse();
 

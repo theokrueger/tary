@@ -1,6 +1,6 @@
 //! Manage loading of the config file
 
-use log::{error, info};
+use log::{error, trace};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File},
@@ -119,21 +119,16 @@ impl Config {
             let mut path = dirs::config_dir().unwrap();
             path.push(CONFIG_DIR);
             path.push(CONFIG_FILE);
-            info!("Loading config from {}", path.display());
+            trace!("Loading config from {}", path.display());
             let s = fs::read_to_string(path)?;
             toml::from_str(&s)
                 .map_err(|e| Error::other(format!("Unable to deserialize config: {e}")))
         };
 
-        match try_load() {
-            Ok(c) => c,
-            Err(e) => {
-                error!("Failed loading from config file: {e}\nUsing default settings.");
-                let cfg = Self::default_config();
-                info!("Using config:\n{}", toml::to_string(&cfg).unwrap());
-                cfg
-            }
-        }
+        try_load().unwrap_or_else(|e| {
+            error!("Failed loading from config file: {e}\nUsing default settings.");
+            Self::default_config()
+        })
     }
 
     pub fn create_default_config() -> Result<(), Error> {

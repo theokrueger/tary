@@ -1,12 +1,6 @@
-use crate::config::Config;
-use crate::content::Content;
-use crate::destinations::TaryDestination;
+use crate::{config::Config, content::Content, destinations::TaryDestination};
 use log::{error, trace};
-use std::error::Error;
-use std::fs::File;
-use std::io::Write;
-use std::path::PathBuf;
-use std::sync::Arc;
+use std::{error::Error, fs::File, io::Write, path::PathBuf, sync::Arc};
 use tokio::sync::broadcast::Receiver;
 
 pub struct Console {

@@ -1,6 +1,5 @@
 //! Handler for input sources
-use crate::config::Config;
-use crate::content::Content;
+use crate::{config::Config, content::Content};
 use std::sync::Arc;
 use tokio::sync::broadcast::Sender;
 

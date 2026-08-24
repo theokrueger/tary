@@ -4,10 +4,8 @@ mod pos_printer;
 use console::Console;
 use pos_printer::PosPrinter;
 
-use crate::config::Config;
-use crate::content::Content;
-use std::error::Error;
-use std::sync::Arc;
+use crate::{config::Config, content::Content};
+use std::{error::Error, sync::Arc};
 use tokio::sync::broadcast::{Receiver, Sender};
 
 pub trait TaryDestination {
