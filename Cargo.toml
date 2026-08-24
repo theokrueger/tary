@@ -4,20 +4,16 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-log = "0.4"
-pretty_env_logger = "0.5"
-toml = "0.9.5"
-serde = { version = "1.0", features = ["derive"] }
-clap = { version = "4.5.43", features = ["derive"] }
-dirs = "6.0"
-ollama-rs = { version = "0.3.2", features = [] }
-tokio = { version = "1", features = ["rt", "macros", "rt-multi-thread"] }
-inquire = "0.7.5"
-escposify = { version = "0.6.2", features = [] }
-chrono = "0.4.41"
-teloxide = { version = "0.17.0", features = ["macros"] }
-securestore = "0.100.0"
-escpos = { version = "0.16.0", features = ["full"] }
-nusb = "0.2.0"
-time = "0.3.43"
-
+log = "^0.4"
+pretty_env_logger = "^0.5"
+toml = "^1.1.4"
+serde = { version = "^1.0", features = ["derive"] }
+clap = { version = "^4.6.6", features = ["derive"] }
+dirs = "^6.0"
+tokio = { version = "^1", features = ["rt", "macros", "rt-multi-thread"] }
+inquire = "^0.9.4"
+escposify = { version = "^0.6.2", features = [] }
+chrono = "^0.4.45"
+escpos = { version = "^0.19.0", features = ["full"] }
+nusb = "^0.2.7"
+time = "^0.3.55"

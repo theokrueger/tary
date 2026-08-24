@@ -6,7 +6,6 @@ use std::{
     fs::{self, File},
     io::{Error, ErrorKind, Write},
 };
-use teloxide::types::UserId;
 
 const CONFIG_DIR: &str = "tary";
 const CONFIG_FILE: &str = "tary.toml";
@@ -18,15 +17,6 @@ const DEFAULT_CONFIG: &str = r#"# Default tary config.
 [general]
 # Your username
 name = "Jane Doe"
-
-## (Optional) Telegram settings
-[sources.telegram]
-# use Telegram input?
-enabled = false
-
-# User allowed to send messages to the bot
-# Get your user id by messaging @userinfobot
-user = 7832026168
 
 ## (Optional) Console destination
 [destinations.console]
@@ -46,31 +36,9 @@ connection = "USB"
 # USB PID/VID for USB communication
 # Example for Seiko Epson Corp. TM-T20II
 # Ensure you have access to writing this USB device. You may need to make a new udev rule.
-usb_vid = 0x04b8
-usb_pid = 0x0e15
-
-## Ollama settings
-[ollama]
-# Address to connect to Ollama server at
-address = "127.0.0.1"
-
-# Port to connect to Ollama server on
-port = 11434
-
-# What model to run. Must be downloaded already via Ollama.
-# The bigger the model your host can run, the better.
-# Response time is not crucial, use the best model you can fit in your VRAM
-model = "gemma3:4b"
-
-# (Optional) The system prompt to be given to the model.
-# Your username and the model's 'Name' will always be prepended to the system prompt
-system_prompt = '''
-Your directives are as follows:
-- Summarise in 20 words or less.
-- Use as short a sentence as is possible.
-- You never fail to summarise.
-'''
-
+# A la `SUBSYSTEM=="usb", ATTR{idVendor}=="0fe6", ATTR{idProduct}=="811e", MODE="0666"`
+usb_vid = 0x0fe6
+usb_pid = 0x811e
 "#;
 
 const MINIMAL_CONFIG: &str = r#"# Minimal tary config.
@@ -79,11 +47,6 @@ const MINIMAL_CONFIG: &str = r#"# Minimal tary config.
 # Reset this config by running `tary --create-minimal-config`
 [general]
 name = "Jane Doe"
-
-[ollama]
-address = "127.0.0.1"
-port = 11434
-model = "gemma3:4b"
 "#;
 
 extern crate dirs;
@@ -103,15 +66,7 @@ pub struct GeneralConfig {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct SourcesConfig {
-    pub telegram: Option<TelegramSourceConfig>,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct TelegramSourceConfig {
-    pub enabled: bool,
-    pub user: Option<UserId>,
-}
+pub struct SourcesConfig {}
 
 #[derive(Serialize, Deserialize)]
 pub struct DestinationsConfig {
@@ -133,8 +88,8 @@ pub enum PosConnectionTypes {
 pub struct PosDestConfig {
     pub enabled: bool,
     pub connection: PosConnectionTypes,
-    pub usb_pid: Option<u16>,
     pub usb_vid: Option<u16>,
+    pub usb_pid: Option<u16>,
 }
 
 #[derive(Serialize, Deserialize)]

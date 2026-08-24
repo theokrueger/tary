@@ -1,7 +1,6 @@
 use crate::config::{Config, PosConnectionTypes as Pct};
 use crate::content::Content;
 use crate::destinations::TaryDestination;
-use crate::storage::Storage;
 use escpos::driver::*;
 use escpos::printer::Printer;
 use escpos::printer_options::PrinterOptions;
@@ -18,7 +17,7 @@ pub struct PosPrinter {
 }
 
 impl TaryDestination for PosPrinter {
-    fn init(cfg: Arc<Config>, _storage: Arc<Storage>) -> Result<Option<Box<Self>>, Box<dyn Error>> {
+    fn init(cfg: Arc<Config>) -> Result<Option<Box<Self>>, Box<dyn Error>> {
         if let Some(p) = &cfg.destinations.pos_printer
             && p.enabled
         {

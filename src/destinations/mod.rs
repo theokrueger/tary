@@ -7,7 +7,6 @@ use console::Console;
 
 use crate::config::Config;
 use crate::content::Content;
-use crate::storage::Storage;
 use std::error::Error;
 use std::sync::Arc;
 use tokio::sync::broadcast::{Receiver, Sender};
@@ -21,7 +20,7 @@ macro_rules! spawn_into_vec {
 }
 
 pub trait TaryDestination {
-    fn init(cfg: Arc<Config>, storage: Arc<Storage>) -> Result<Option<Box<Self>>, Box<dyn Error>>;
+    fn init(cfg: Arc<Config>) -> Result<Option<Box<Self>>, Box<dyn Error>>;
 
     async fn listen(self, rx: Receiver<Content>);
 }
@@ -32,12 +31,11 @@ pub struct Destinations {
 }
 
 impl Destinations {
-    pub fn new(cfg: Arc<Config>, storage: Arc<Storage>) -> Self {
+    pub fn new(cfg: Arc<Config>) -> Self {
         Self {
-            pos_printer: PosPrinter::init(cfg.clone(), storage.clone())
+            pos_printer: PosPrinter::init(cfg.clone())
                 .expect("Failed to init POS printer destinagion"),
-            console: Console::init(cfg.clone(), storage.clone())
-                .expect("Failed to init console destination"),
+            console: Console::init(cfg.clone()).expect("Failed to init console destination"),
         }
     }
 
