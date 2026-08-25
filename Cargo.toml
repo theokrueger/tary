@@ -14,8 +14,7 @@ tokio = { version = "^1", features = ["rt", "macros", "rt-multi-thread", "sync",
 axum = { version = "0.8", features = ["json"] }
 serde_json = "1"
 inquire = "^0.9.4"
-escposify = { version = "^0.6.2", features = [] }
 chrono = "^0.4.45"
-escpos = { version = "^0.19.0", features = ["full"] }
+escpos = { version = "^0.19.1", features = ["native_usb", "std"] }
 nusb = "^0.2.7"
 time = "^0.3.55"

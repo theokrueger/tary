@@ -1,7 +1,7 @@
 //! Handler for middlewares
 //! Middleware is generally content transformation and/or inference upon it
-mod stub;
-use stub::StubMiddleware;
+mod i2c_display;
+use i2c_display::I2cDisplayMiddleware;
 
 use crate::{config::Config, content::Content};
 use std::{error::Error, sync::Arc};
@@ -14,20 +14,20 @@ pub trait TaryMiddleware {
 }
 
 pub struct Middlewares {
-    sm: StubMiddleware,
+    i2c: I2cDisplayMiddleware,
 }
 
 impl Middlewares {
     pub fn new(cfg: Arc<Config>) -> Self {
         Self {
-            sm: *StubMiddleware::init(cfg.clone()).unwrap().unwrap(),
+            i2c: *I2cDisplayMiddleware::init(cfg.clone()).unwrap().unwrap(),
         }
     }
 
     pub async fn start(mut self, mut rx: Receiver<Content>, tx: Sender<Content>) {
         loop {
             let mut content = rx.recv().await.unwrap();
-            content = self.sm.transform(content).await;
+            content = self.i2c.transform(content).await;
             tx.send(content).unwrap();
         }
     }

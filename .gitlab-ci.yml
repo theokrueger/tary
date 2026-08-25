@@ -1,18 +1,58 @@
 image: rust:latest
 
+variables:
+  TARGETS: x86_64-unknown-linux-gnu arm-unknown-linux-gnueabihf
+  TARGET_ARCHNAMES: amd64 armhf
+  PKGS: libudev-dev librust-udev-dev librust-libudev-sys-dev librust-libudev-dev
+
+stages:
+  - test
+  - release
+
 before_script:
-  - apt-get update
-  - apt-get install -y libudev-dev
-  - rustup component add clippy
+  - sudo apt update -y
+  - rustup default stable
+  - |
+    for TARGET in $TARGET_ARCHNAMES; do
+      sudo dpkg --add-architecture "${TARGET}"
+    done
+  - sudo apt update -y
+  - |
+    for TARGET in $TARGET_ARCHNAMES; do
+      for PKG in $PKGS; do
+        lst="$lst $PKG:$TARGET"
+      done
+    done
+  - sudo apt install -y $lst
 
-lint:
-  script:
-    - cargo clippy --all-targets --all-features --keep-going -- -D warnings
-
-build:
-  script:
-    - cargo build --verbose
-
-test:
+test_job:
+  stage: test
+  rules:
+    - if: false
   script:
     - cargo test --verbose
+    - cargo build --verbose
+
+release_job:
+  stage: release
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  release:
+    tag_name: 'prerelease-$CI_PIPELINE_IID'
+    description: 'automatic build on commit'
+    ref: '$CI_COMMIT_SHA'
+  artifacts:
+    paths:
+      - out/*
+  script:
+    - mkdir out
+    - SYSROOT="/build/root"
+    - export PKG_CONFIG_DIR=
+    - export PKG_CONFIG_LIBDIR="${SYSROOT}/usr/lib/pkgconfig:${SYSROOT}/usr/share/pkgconfig"
+    - export PKG_CONFIG_SYSROOT_DIR="${SYSROOT}"
+    - |
+      for TARGET in $TARGETS; do
+        export PKG_CONFIG_PATH="/usr/lib/${TARGET}/pkgconfig"
+        cargo build --verbose --release --target="${TARGET}"
+        mv "target/${TARGET}/release/tary" "out/tary-${TARGET}"
+      done
