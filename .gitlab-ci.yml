@@ -7,7 +7,7 @@ before_script:
 
 lint:
   script:
-    - cargo clippy --all-targets --all-features --keep-going -D warnings
+    - cargo clippy --all-targets --all-features --keep-going -- -D warnings
 
 build:
   script:
