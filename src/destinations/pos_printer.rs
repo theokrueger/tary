@@ -12,6 +12,7 @@ pub struct PosPrinter {
     connection_type: Pct,
     usb_driver: Option<Box<NativeUsbDriver>>,
     usb_id: Option<(u16, u16)>,
+    usb_initialized: bool,
 }
 
 impl TaryDestination for PosPrinter {
@@ -25,6 +26,7 @@ impl TaryDestination for PosPrinter {
                 connection_type: p.connection.clone(),
                 usb_driver: None,
                 usb_id: None,
+                usb_initialized: false,
             };
 
             match p.connection {
@@ -37,7 +39,9 @@ impl TaryDestination for PosPrinter {
                         .expect("USB PID Not specified, but USB connection type is selected!");
                     pos.usb_id = Some((vid, pid));
                     info!("Setting up USB POS Printer at [{:x}:{:x}]", vid, pid);
-                    pos.init_usb()?;
+                    pos.init_usb().unwrap_or_else(|e| {
+                        error!("Unable to init USB POS Printer with {e}! Will retry lazily.")
+                    });
                 }
             }
 
@@ -56,8 +60,9 @@ impl TaryDestination for PosPrinter {
 impl PosPrinter {
     fn init_usb(&mut self) -> Result<(), Box<dyn Error>> {
         self.usb_driver = None;
-        let (vid, pid) = self.usb_id.expect("No USB pid and vid specified");
+        let (vid, pid) = self.usb_id.unwrap();
         self.usb_driver = Some(Box::new(NativeUsbDriver::open(vid, pid)?));
+        self.usb_initialized = true;
         Ok(())
     }
 
@@ -71,15 +76,29 @@ impl PosPrinter {
             };
             trace!("POS printer dest received content");
 
-            for i in 0..3 {
-                if i > 0 {
-                    // sleep for usb reinit
-                    std::thread::sleep(Duration::from_millis(2000));
-                }
+            for i in 1..4 {
+                // reinit
+                match self.connection_type {
+                    Pct::Usb => {
+                        if !self.usb_initialized {
+                            // sleep for usb reinit
+                            std::thread::sleep(Duration::from_millis(5000));
+                            if let Err(e) = self.init_usb() {
+                                error!("[{i}/3] USB POS Printer {e}");
+                                continue;
+                            }
+                        }
+                    }
+                };
+
+                // print
                 match self.try_print(&content, date_format) {
-                    Ok(true) => {}
-                    Ok(false) => break,
-                    Err(e) => error!("POS printer error: {e}"),
+                    Ok(_) => break,
+                    Err(e) => {
+                        error!("[{i}/3] POS printer error: {e}");
+                        self.usb_initialized = false;
+                        continue;
+                    }
                 }
             }
         }
@@ -87,9 +106,8 @@ impl PosPrinter {
         Ok(())
     }
 
-    /// Print content over a fresh connection. true for retry
-    fn try_print(&mut self, content: &Content, date_format: &str) -> Result<bool, Box<dyn Error>> {
-        self.init_usb()?;
+    /// Print content over a fresh connection
+    fn try_print(&mut self, content: &Content, date_format: &str) -> Result<(), Box<dyn Error>> {
         let driver = match self.connection_type {
             Pct::Usb => *self.usb_driver.clone().unwrap(),
         };
@@ -119,7 +137,7 @@ impl PosPrinter {
             .justify(JustifyMode::RIGHT)?
             .underline(UnderlineMode::None)?
             .bold(false)?
-            .writeln(content.source.as_str())?;
+            .writeln(format!("Source: {}", content.source).as_str())?;
 
         // date
         {
@@ -153,6 +171,6 @@ impl PosPrinter {
 
         printer.print_cut()?;
 
-        Ok(false)
+        Ok(())
     }
 }
