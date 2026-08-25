@@ -1,1 +1,3 @@
 /target
+.gitlab-ci-local
+/out

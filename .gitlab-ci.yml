@@ -5,36 +5,10 @@ variables:
   TARGET_ARCHNAMES: amd64 armhf
   PKGS: libudev-dev librust-udev-dev librust-libudev-sys-dev librust-libudev-dev
 
-stages:
-  - test
-  - release
-
 before_script:
-  - sudo apt update -y
   - rustup default stable
-  - |
-    for TARGET in $TARGET_ARCHNAMES; do
-      sudo dpkg --add-architecture "${TARGET}"
-    done
-  - sudo apt update -y
-  - |
-    for TARGET in $TARGET_ARCHNAMES; do
-      for PKG in $PKGS; do
-        lst="$lst $PKG:$TARGET"
-      done
-    done
-  - sudo apt install -y $lst
-
-test_job:
-  stage: test
-  rules:
-    - if: 1 == 2
-  script:
-    - cargo test --verbose
-    - cargo build --verbose
 
 release_job:
-  stage: release
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   release:
@@ -45,6 +19,19 @@ release_job:
     paths:
       - out/*
   script:
+    - |
+      for TARGET in $TARGET_ARCHNAMES; do
+        dpkg --add-architecture "${TARGET}"
+      done
+    - apt update -y
+    - |
+      for TARGET in $TARGET_ARCHNAMES; do
+        pkglst="crossbuild-essential-$TARGET"
+        for PKG in $PKGS; do
+          pkglst="$pkglst $PKG:$TARGET"
+        done
+      done
+      apt install -y $pkglst
     - mkdir out
     - SYSROOT="/build/root"
     - export PKG_CONFIG_DIR=
@@ -52,7 +39,13 @@ release_job:
     - export PKG_CONFIG_SYSROOT_DIR="${SYSROOT}"
     - |
       for TARGET in $TARGETS; do
+        echo "Building for $TARGET"
+        rustup target add "${TARGET}"
         export PKG_CONFIG_PATH="/usr/lib/${TARGET}/pkgconfig"
-        cargo build --verbose --release --target="${TARGET}"
+        if [[ "${TARGET}" != "x86_64-unknown-linux-gnu" ]]; then
+          RUSTFLAGS="-C linker=$(echo $TARGET | sed 's/\-unknown//')-gcc" cargo build --release --target="${TARGET}"
+        else
+          cargo build --release --target="${TARGET}"
+        fi
         mv "target/${TARGET}/release/tary" "out/tary-${TARGET}"
       done
