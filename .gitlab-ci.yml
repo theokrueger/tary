@@ -11,10 +11,6 @@ before_script:
 release_job:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-  release:
-    tag_name: 'prerelease-$CI_PIPELINE_IID'
-    description: 'automatic build on commit'
-    ref: '$CI_COMMIT_SHA'
   artifacts:
     paths:
       - out/*
