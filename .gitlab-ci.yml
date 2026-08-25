@@ -28,7 +28,7 @@ before_script:
 test_job:
   stage: test
   rules:
-    - if: false
+    - if: 1 == 2
   script:
     - cargo test --verbose
     - cargo build --verbose
