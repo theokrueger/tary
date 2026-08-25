@@ -5,60 +5,26 @@ Content comes in from sources, get transformed by middleware, and routed to dest
 ** Quick Start
 Install `libudev` (i.e. `sudo apt install libudev-dev` on Debian).
 #+BEGIN_SRC bash
-  cargo install tary
+  git clone https://gitlab.com/theokrueger/tary --depth 1
+  cd tary
+  cargo install --path .
   tary --create-config
   nano ~/.config/tary/tary.toml
   tary
 #+END_SRC
 
-See [[Managing Sources]], [[Managing Middleware]] and [[Managing Destinations]] for info on setting up tary to your liking.
+See [[./doc/docs.org][the documentation]] for more information
 
-** Managing Sources
-Adding and enabling or disabling sources:
+# ** Usage Patterns
+# *** POS System
+# Buy a cheap POS printer, and use it as your main destination.
+# Content will be printed out on receipt paper, which when completed can be stuck onto a receipt spike (it's very satisfying).
 
-*** HTTP API/WebUI
-1. Enable in config
-#+BEGIN_SRC toml
-  [sources.http_server]
-  enabled = true
-  host = "127.0.0.1"
-  port = 80
-  # html_path = "/path/to/index.html"  
-#+END_SRC
+# Recieve new content with an exposed (authenticated) HTTP API from anywhere!
 
-If ~html_path~ is not specified, a default WebUI will be used.
 
-** Managing Middleware
-Adding and enabling or disabling Middleware
+** Adding your own services
+The code is very extensible, and the HTTP API source can be easily interacted with by external programs.
 
-*** TODO
-
-** Managing destinations
-Adding and enabling or disabling destinations:
-
-*** POS Printer (Receipt printer)
-1. Get the PID and VID of your POS printer using `lsusb`
-#+BEGIN_SRC
-  $ lsusb
-  ...
-  Bus 001 Device 018: ID 04b8:0e15 Seiko Epson Corp. TM-T20II
-  ...
-#+END_SRC
-
-2. Add a `udev` rule to allow user access to the printer
-#+BEGIN_SRC udev
-  # /etc/udev/rules.d/92-escpos.rules
-  SUBSYSTEM=="usb", ATTR{idVendor}=="04b8", ATTR{idProduct}=="0e15", MODE="0666"
-#+END_SRC
-
-Reload udev by running ~udevadm control --reload-rules && udevadm trigger~ as root
-
-3. Ensure the printer is enabled in `tary.toml`
-#+BEGIN_SRC toml
-  # ~/.config/tary/tary.toml
-  [destinations.pos_printer]
-  enabled = true
-  connection = "USB"
-  usb_vid = 0x04b8
-  usb_pid = 0x0e15
-#+END_SRC
+If you have a well written, Rust-native source, destination, or middleware you'd like to add: feel free to contribute!
+The simpler the better.

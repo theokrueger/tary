@@ -1,0 +1,7 @@
+command_user="me:users"
+command="/usr/local/bin/tary"
+# for logs, use the logging config
+
+depend() {
+        after net
+}

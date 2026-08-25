@@ -1,0 +1,14 @@
+[Unit]
+Description=tary
+After=network.target
+
+[Service]
+Type=simple
+User=me
+Group=users
+ExecStart=/usr/local/bin/tary
+Restart=on-failure
+StandardOutput=file:/home/me/logs/tary.log
+
+[Install]
+WantedBy=multi-user.target

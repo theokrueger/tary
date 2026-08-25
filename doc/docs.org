@@ -1,0 +1,100 @@
+- [[Installation]]
+  - [[Setting as a Service]]
+- [[Managing Sources]]
+  - [[HTTP API/WebUI]]
+- [[Managing Middleware]]
+- [[Managing Destinations]]
+  - [[Console (stdout)]]
+  - [[POS Printer (Receipt printer)]]
+
+* Installation
+** Dependencies
+Install Rust.
+
+Install `libudev`:
+- Debian/Ubuntu: `apt install libudev-dev`
+- Fedora/RHEL: `dnf install 
+- Arch: `pacman -S libudev`
+- Gentoo: `libudev` is probably already installed.
+
+** Building
+#+BEGIN_SRC bash
+  git clone https://gitlab.com/theokrueger/tary --depth 1
+  cd tary
+  cargo install --path .
+#+END_SRC
+
+** Setting as as Service
+Make your own service, or see the pre-provided service files for your init system:
+- [[./tary.openrc][openrc]]
+  - [[How to Use][https://wiki.gentoo.org/wiki/OpenRC#User_services]]
+- [[./tary.service][systemd]]
+  - [[How to Use][https://wiki.archlinux.org/title/Systemd/User]]
+
+Make sure to replace variables as appropriate before installation.
+
+
+** Managing Sources
+Adding and enabling or disabling sources:
+
+*** HTTP API/WebUI
+1. Enable in config
+#+BEGIN_SRC toml
+  [sources.http_server]
+  enabled = true
+  host = "127.0.0.1"
+  port = 80
+  # html_path = "/path/to/index.html"  
+#+END_SRC
+
+If ~html_path~ is not specified, a default WebUI will be used.
+
+2. If low port numbers (i.e. 80) are chosen, give permission to do so:
+#+BEGIN_SRC
+  \# setcap CAP_NET_BIND_SERVICE=+eip "$(which tary)"
+#+END_SRC
+
+
+** Managing Middleware
+Adding and enabling or disabling Middleware
+
+*** TODO
+
+** Managing destinations
+Adding and enabling or disabling destinations:
+
+*** Console (stdout)
+#+BEGIN_SRC
+[destinations.console]
+enabled = true
+# do not specify output for stdout
+output = "/tmp/tary.log" 
+#+END_SRC
+
+*** POS Printer (Receipt printer)
+1. Get the PID and VID of your POS printer using `lsusb`
+#+BEGIN_SRC
+  $ lsusb
+  ...
+  Bus 001 Device 018: ID 04b8:0e15 Seiko Epson Corp. TM-T20II
+  ...
+#+END_SRC
+
+2. Add a `udev` rule to allow user access to the printer
+#+BEGIN_SRC udev
+  # /etc/udev/rules.d/92-escpos.rules
+  SUBSYSTEM=="usb", ATTR{idVendor}=="04b8", ATTR{idProduct}=="0e15", MODE="0666"
+#+END_SRC
+
+Reload udev by running ~udevadm control --reload-rules && udevadm trigger~ as root
+
+3. Ensure the printer is enabled in `tary.toml`
+#+BEGIN_SRC toml
+  # ~/.config/tary/tary.toml
+  [destinations.pos_printer]
+  enabled = true
+  connection = "USB"
+  usb_vid = 0x04b8
+  usb_pid = 0x0e15
+#+END_SRC
+
