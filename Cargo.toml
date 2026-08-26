@@ -18,3 +18,5 @@ chrono = "^0.4.45"
 escpos = { version = "^0.19.1", features = ["native_usb", "std"] }
 nusb = "^0.2.7"
 time = "^0.3.55"
+async-trait = "0.1.92"
+regex = "1.13.1"
