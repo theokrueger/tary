@@ -15,24 +15,32 @@ use tokio::{
 #[async_trait]
 pub trait TaryMiddleware
 where
-    Self: 'static + Send,
+    Self: 'static + Send + Sync,
 {
-    fn init(cfg: Arc<Config>) -> Result<Option<Box<Self>>, Box<dyn Error>>
+    fn init(cfg: Arc<Config>) -> Result<Option<Arc<Self>>, Box<dyn Error>>
     where
         Self: Sized;
 
     /// Get order of this middleware
-    fn order(&self) -> u32;
+    fn order(&self) -> u32 {
+        0
+    }
+
+    /// Prepare to do a transformation
+    async fn pre_transform(&self) {}
 
     /// Apply some transformation to content
-    fn transform(&mut self, ct: Content) -> Content;
+    async fn transform(&self, ct: Content) -> Content {
+        ct
+    }
 
-    /// Listener to content, cannot modify
-    async fn listen(&mut self);
+    /// Listener to content, cannot modify it
+    /// TODO listen actually
+    async fn listen(&self) {}
 }
 
 pub struct Middlewares {
-    pipeline: Vec<Arc<Mutex<Box<dyn TaryMiddleware>>>>,
+    pipeline: Vec<Arc<dyn TaryMiddleware>>,
     listeners: Vec<JoinHandle<()>>,
 }
 
@@ -43,12 +51,8 @@ impl Middlewares {
             listeners: Vec::new(),
         };
 
-        mw.pipeline.push(Arc::new(Mutex::new(
-            RegexMiddleware::init(cfg).unwrap().unwrap(),
-        )));
-
-        // let mut a = I2cDisplayMiddleware::init(cfg).unwrap().unwrap();
-        // mw.pipeline.push(Arc::new(Mutex::new(a)));
+        mw.pipeline
+            .push(RegexMiddleware::init(cfg).unwrap().unwrap());
 
         mw
     }
@@ -57,7 +61,7 @@ impl Middlewares {
         for mw in &self.pipeline {
             let m = mw.clone();
             self.listeners.push(tokio::spawn(async move {
-                m.lock().await.listen().await;
+                m.listen().await;
             }));
         }
 
@@ -66,7 +70,8 @@ impl Middlewares {
         loop {
             let mut content = rx.recv().await.unwrap();
             for mw in &self.pipeline {
-                content = mw.lock().await.transform(content);
+                mw.pre_transform();
+                content = mw.transform(content).await;
             }
             tx.send(content).unwrap();
         }

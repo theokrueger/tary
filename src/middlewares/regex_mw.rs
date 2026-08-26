@@ -9,20 +9,16 @@ pub struct RegexMiddleware {}
 
 #[async_trait]
 impl TaryMiddleware for RegexMiddleware {
-    fn init(_cfg: Arc<Config>) -> Result<Option<Box<Self>>, Box<dyn Error>> {
-        Ok(Some(Box::new(Self {})))
+    fn init(_cfg: Arc<Config>) -> Result<Option<Arc<Self>>, Box<dyn Error>> {
+        Ok(Some(Arc::new(Self {})))
     }
 
-    fn transform(&mut self, ct: Content) -> Content {
-        info!("aaaaaaa");
+    async fn transform(&self, ct: Content) -> Content {
+        info!("transform");
         ct
     }
 
-    async fn listen(&mut self) {
-        info!("bbbbbb");
-    }
-
-    fn order(&self) -> u32 {
-        0
+    async fn listen(&self) {
+        info!("listen");
     }
 }
