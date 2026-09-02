@@ -35,7 +35,7 @@
       <label for="due">Due date</label>
       <span style="display: flex; flex-wrap: none; gap: 0.5rem;">
 	<input id="due" name="due" type="datetime-local" step="1">
-	<button type="button" onclick="form.reset()">Reset</button>
+	<button type="button" id='reset-due-btn'>Reset</button>
       </span>
     </div>
     <div class="preset-row">
@@ -54,6 +54,7 @@
   </form>
   <div id="result" class="status" style="display:none;"></div>
   <script>
+    document.getElementById('reset-due-btn').addEventListener('click', _=>{document.getElementById("due").value = ''});
     const form = document.getElementById('todo-form');
     const result = document.getElementById('result');
 
