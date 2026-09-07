@@ -6,17 +6,19 @@
   <title>Tary</title>
   <style>
     * { font-family: monospace; }
-    body { max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    body { max-width: 60rem; margin: 2rem auto; padding: 0 1rem; }
     h1 { color: #333; }
-    form { display: grid; gap: 0.75rem; }
+    form { display: grid; gap: 1rem; }
     label { font-weight: bold; }
     input, button, textarea { padding: 0.5rem; font-size: 1rem; box-sizing: border-box; }
     input, textarea { width: 100%; }
     textarea { min-height: 8rem; resize: vertical; }
     button { cursor: pointer; }
-    .status { padding: 0.5rem; margin-top: 0.5rem; }
-    .status.ok { background: #d4edda; color: #155724; }
-    .status.error { background: #f8d7da; color: #721c24; }
+    req { color: tomato; }
+    .status { padding: 0.5rem; margin-top: 0.5rem; color: #000000bb }
+    .status.await { background: lightgoldenrodyellow; }
+    .status.ok { background: lightgreen; }
+    .status.error { background: tomato; }
     .preset-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
     .preset-row button { flex: 1; min-width: 80px; font-size: 0.85rem; }
   </style>
@@ -28,7 +30,7 @@
   </span>
   <form id="todo-form">
     <div>
-      <label for="content">Content *</label>
+      <label for="content">Content <req>*<req></label>
       <textarea id="content" name="content" required></textarea>
     </div>
     <div>
@@ -123,6 +125,11 @@
         "Do business at the stock market.",
         "Do nothing.",
         "Forgive yourself.",
+        "Try a new distro.",
+        "Fix everything.",
+        "Clean the room.",
+        "Bikeshed some more.",
+        "Forfeit mortal possessions.",
       ];
       document.getElementById('content').placeholder = flavours[Math.floor(Math.random() * flavours.length)];
     });
@@ -146,6 +153,9 @@
       if (due) body.due = due;
 
       try {
+        result.textContent = 'Sending...';
+        result.className = 'status await';
+        result.style.display = 'block';
         const resp = await fetch('/todo', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -154,17 +164,14 @@
         if (resp.ok) {
           result.textContent = 'Submitted!';
           result.className = 'status ok';
-          result.style.display = 'block';
           form.reset();
         } else {
           result.textContent = resp.status + ' ' + resp.statusText;
           result.className = 'status error';
-          result.style.display = 'block';
         }
       } catch (err) {
         result.textContent = 'Error: ' + err.message;
         result.className = 'status error';
-        result.style.display = 'block';
       }
     });
   </script>
