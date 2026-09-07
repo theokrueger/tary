@@ -5,14 +5,17 @@ use crate::config::Config;
 use crate::content::{Content, ContentType};
 use crate::sources::TarySource;
 use axum::{
-    Router,
+    BoxError, Router,
     extract::{Json, State},
-    http::StatusCode,
-    response::{Html, IntoResponse, Response},
+    handler::HandlerWithoutStateExt,
+    http::{StatusCode, Uri},
+    response::{Html, IntoResponse, Redirect, Response},
     routing::{get, post},
 };
+use axum_server::tls_rustls::RustlsConfig;
 use log::{error, info, trace};
 use serde::Deserialize;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::broadcast::Sender;
 
@@ -38,33 +41,55 @@ pub struct HttpServerSource {
 
 impl TarySource for HttpServerSource {
     async fn listen(self, tx: Sender<Content>) {
-        let http = self.cfg.sources.http_server.as_ref();
-        let html_path = http.and_then(|h| h.html_path.clone());
+        let http = self.cfg.sources.http_server.as_ref().unwrap();
 
-        let host = http
-            .map(|h| h.host.clone())
-            .unwrap_or_else(|| "127.0.0.1".to_string());
-        let port = http.map(|h| h.port).unwrap_or(3000);
-
-        let state = Arc::new(AppState { tx, html_path });
+        let state = Arc::new(AppState {
+            tx,
+            html_path: http.html_path.clone(),
+        });
 
         let app = Router::new()
             .route("/", get(serve_html))
             .route("/todo", post(create_todo))
             .with_state(state);
 
-        let addr = format!("{host}:{port}");
-        info!("Starting HTTP server on {addr}");
+        let host: [u8; 4] = http
+            .host
+            .split('.')
+            .map(|s| s.parse::<u8>().unwrap())
+            .collect::<Vec<u8>>()
+            .try_into()
+            .unwrap();
 
-        let listener = match tokio::net::TcpListener::bind(&addr).await {
-            Ok(l) => l,
-            Err(e) => {
-                error!("Failed to bind HTTP server to {addr}: {e}");
-                return;
-            }
-        };
+        let p = http.port;
+        let http_addr = SocketAddr::from((host, p));
 
-        let _ = axum::serve(listener, app).await;
+        if http.https_enabled.unwrap_or(false) {
+            let sp = http.https_port.unwrap();
+            let https_addr = SocketAddr::from((host, sp));
+
+            let config = RustlsConfig::from_pem_file(
+                http.https_cert.as_ref().unwrap(),
+                http.https_key.as_ref().unwrap(),
+            )
+            .await
+            .unwrap();
+
+            info!("Starting HTTP server on {}:{}", http.host, p);
+            tokio::spawn(axum_server::bind(http_addr).serve(app.clone().into_make_service()));
+
+            info!("Starting HTTPS server on {}:{}", http.host, sp);
+            axum_server::bind_rustls(https_addr, config)
+                .serve(app.into_make_service())
+                .await
+                .unwrap();
+        } else {
+            info!("Starting HTTP server on {}:{}", http.host, p);
+            axum_server::bind(http_addr)
+                .serve(app.into_make_service())
+                .await
+                .unwrap();
+        }
     }
 
     fn init(cfg: Arc<Config>) -> Option<Box<Self>> {

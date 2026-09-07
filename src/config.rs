@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File},
     io::{Error, Write},
+    path::PathBuf,
 };
 
 const CONFIG_DIR: &str = "tary";
@@ -13,6 +14,9 @@ const CONFIG_FILE: &str = "config.toml";
 
 const DEFAULT_CONFIG: &str = r#"# Default tary config.
 # Reset this configuration by running `tary --create-config`
+#
+# For paths, absolute paths are preferred but relative paths
+# are relaltive to the config directory
 
 ### General Config ###
 [general]
@@ -28,8 +32,17 @@ name = "Jane Doe"
 enabled = true
 # bind address
 host = "127.0.0.1"
-# bind port
+# http bind port
 port = 3000
+
+# (Optional) HTTPS support
+# All four options must be specified if https_enabled is true
+#https_enabled = false
+#https_port = 3001
+#https_cert = "/path/to/cert"
+#https_key = "/path/to/key"
+
+
 # (Optional) path to a custom HTML file served on '/'.
 # If not specified, a default HTML page is served.
 # html_path = "/path/to/index.html"
@@ -115,6 +128,10 @@ pub struct HttpServerConfig {
     pub host: String,
     pub port: u16,
     pub html_path: Option<String>,
+    pub https_enabled: Option<bool>,
+    pub https_port: Option<u16>,
+    pub https_cert: Option<String>,
+    pub https_key: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -157,15 +174,20 @@ pub struct PosDestConfig {
 }
 
 impl Config {
+    pub fn config_dir() -> PathBuf {
+        let mut path = dirs::config_dir().unwrap();
+        path.push(CONFIG_DIR);
+        path
+    }
+
     fn default_config() -> Self {
         toml::from_str(DEFAULT_CONFIG).unwrap()
     }
 
     /// load from CONFIG_FILE, use defaults if failure
-    pub fn load_or_default() -> Self {
+    pub fn load_or_default() -> Result<Self, Error> {
         let try_load = || -> Result<Self, Error> {
-            let mut path = dirs::config_dir().unwrap();
-            path.push(CONFIG_DIR);
+            let mut path = Self::config_dir();
             path.push(CONFIG_FILE);
             trace!("Loading config from {}", path.display());
             let s = fs::read_to_string(path)?;
@@ -173,10 +195,42 @@ impl Config {
                 .map_err(|e| Error::other(format!("Unable to deserialize config: {e}")))
         };
 
-        try_load().unwrap_or_else(|e| {
+        let cfg = try_load().unwrap_or_else(|e| {
             error!("Failed loading from config file: {e}\nUsing default settings.");
             Self::default_config()
-        })
+        });
+
+        // sanity checks
+        let mut fail = false;
+
+        // ensure all https optional args are presented when secure server is enabled, allowing unwrap later :)
+        if let Some(ref a) = cfg.sources.http_server
+            && let Some(b) = a.https_enabled
+            && b
+        {
+            [
+                (a.https_port.is_some(), "https_port"),
+                (a.https_cert.is_some(), "https_cert"),
+                (a.https_key.is_some(), "https_key"),
+            ]
+            .iter()
+            .for_each(|(b, s)| {
+                if !b {
+                    error!(
+                        "HTTPS is enabled for the HTTP Server source, yet {s} is not specified!"
+                    );
+                    fail = true;
+                }
+            });
+        }
+
+        if fail {
+            Err(Error::other(
+                "Sanity check of config failed! Review error log for suggestions.",
+            ))
+        } else {
+            Ok(cfg)
+        }
     }
 
     pub fn create_default_config() -> Result<(), Error> {

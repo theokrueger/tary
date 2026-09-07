@@ -27,6 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     pretty_env_logger::init();
     trace!("Starting Tary");
+    std::env::set_current_dir(Config::config_dir())?;
 
     let args = Args::parse();
 
@@ -49,7 +50,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    let cfg = Arc::new(Config::load_or_default());
+    let cfg = Arc::new(match Config::load_or_default() {
+        Ok(c) => c,
+        Err(e) => {
+            error!("{e}");
+            std::process::exit(1);
+        }
+    });
 
     let sources = Sources::new(cfg.clone());
     let sc = sources.count();
