@@ -5,15 +5,14 @@ use crate::config::Config;
 use crate::content::{Content, ContentType};
 use crate::sources::TarySource;
 use axum::{
-    BoxError, Router,
+    Router,
     extract::{Json, State},
-    handler::HandlerWithoutStateExt,
-    http::{StatusCode, Uri},
-    response::{Html, IntoResponse, Redirect, Response},
+    http::StatusCode,
+    response::{Html, IntoResponse, Response},
     routing::{get, post},
 };
 use axum_server::tls_rustls::RustlsConfig;
-use log::{error, info, trace};
+use log::{info, trace};
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -64,7 +63,7 @@ impl TarySource for HttpServerSource {
         let p = http.port;
         let http_addr = SocketAddr::from((host, p));
 
-        if http.https_enabled.unwrap_or(false) {
+        if http.https_enabled {
             let sp = http.https_port.unwrap();
             let https_addr = SocketAddr::from((host, sp));
 
@@ -75,8 +74,10 @@ impl TarySource for HttpServerSource {
             .await
             .unwrap();
 
-            info!("Starting HTTP server on {}:{}", http.host, p);
-            tokio::spawn(axum_server::bind(http_addr).serve(app.clone().into_make_service()));
+            if !http.https_only {
+                info!("Starting HTTP server on {}:{}", http.host, p);
+                tokio::spawn(axum_server::bind(http_addr).serve(app.clone().into_make_service()));
+            }
 
             info!("Starting HTTPS server on {}:{}", http.host, sp);
             axum_server::bind_rustls(https_addr, config)

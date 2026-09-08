@@ -32,12 +32,14 @@ name = "Jane Doe"
 enabled = true
 # bind address
 host = "127.0.0.1"
-# http bind port
+# http bind port, optional if https_only is true
 port = 3000
 
 # (Optional) HTTPS support
-# All four options must be specified if https_enabled is true
 #https_enabled = false
+#https_only = false
+
+# All three below options must be specified if https_enabled is true
 #https_port = 3001
 #https_cert = "/path/to/cert"
 #https_key = "/path/to/key"
@@ -122,16 +124,24 @@ pub struct SourcesConfig {
     pub http_server: Option<HttpServerConfig>,
 }
 
-#[derive(Clone, Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct HttpServerConfig {
     pub enabled: bool,
     pub host: String,
+    #[serde(default = "http_server_default_port")]
     pub port: u16,
     pub html_path: Option<String>,
-    pub https_enabled: Option<bool>,
+    #[serde(default)]
+    pub https_enabled: bool,
     pub https_port: Option<u16>,
     pub https_cert: Option<String>,
     pub https_key: Option<String>,
+    #[serde(default)]
+    pub https_only: bool,
+}
+
+const fn http_server_default_port() -> u16 {
+    3000
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -203,11 +213,11 @@ impl Config {
         // sanity checks
         let mut fail = false;
 
-        // ensure all https optional args are presented when secure server is enabled, allowing unwrap later :)
+        // https server checks
         if let Some(ref a) = cfg.sources.http_server
-            && let Some(b) = a.https_enabled
-            && b
+            && a.https_enabled
         {
+            // ensure all https optional args are presented when secure server is enabled, allowing unwrap later :)
             [
                 (a.https_port.is_some(), "https_port"),
                 (a.https_cert.is_some(), "https_cert"),
@@ -222,6 +232,14 @@ impl Config {
                     fail = true;
                 }
             });
+
+            // ensure no collision on ports
+            if !a.https_only
+                && let Some(p) = a.https_port
+                && p == a.port
+            {
+                error!("HTTP and HTTPS ports are colliding while both servers are enabled!");
+            }
         }
 
         if fail {

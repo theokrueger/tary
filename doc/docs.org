@@ -58,9 +58,11 @@ If ~html_path~ is not specified, a default WebUI will be used.
 #+BEGIN_SRC toml
   \# Under [sources.http_server]
   https_enabled = true
-  https_port = 3001
+  https_port = 443
   https_cert = "/path/to/public_certificate.pem"
   https_key = "/path/to/private_key.pem"
+  \# (Optional)
+  \# https_only = true 
 #+END_SRC
 
 These keys will be used to encrypt communication and enable HTTPS.
