@@ -26,7 +26,19 @@ where
         u32::MAX
     }
 
-    /// Prepare to do a transformation
+    fn has_pre_transform(&self) -> bool {
+        false
+    }
+
+    fn has_transform(&self) -> bool {
+        false
+    }
+
+    fn has_sniff(&self) -> bool {
+        false
+    }
+
+    /// Prepare to do a transformation. For high-latency tasks.
     /// It is up to the middleware implementation to handle cases where `pre_transform()`
     /// doesn't finish before `transform()` is called.
     async fn pre_transform(&self, _ct: Content) {}
@@ -36,23 +48,20 @@ where
         ct
     }
 
-    /// Listener to content, cannot modify it
-    async fn listen(&self, _rx: Receiver<Content>) {}
+    /// Sniff content, cannot modify it
+    async fn sniff(&self, _rx: Receiver<Content>) {}
 }
 
-pub struct Middlewares
-where
-    Self: 'static,
-{
+pub struct Middlewares {
     pipeline: Vec<Arc<dyn TaryMiddleware>>,
-    listeners: Vec<JoinHandle<()>>,
+    sniffers: Vec<JoinHandle<()>>,
 }
 
 impl Middlewares {
     pub fn new(cfg: Arc<Config>) -> Self {
         let mut mw = Self {
             pipeline: Vec::new(),
-            listeners: Vec::new(),
+            sniffers: Vec::new(),
         };
 
         for x in [RegexMiddleware::init(cfg)] {
@@ -71,13 +80,15 @@ impl Middlewares {
     }
 
     pub async fn start(mut self, rx: Sender<Content>, tx: Sender<Content>) {
-        // listeners
+        // sniffers
         for mw in &self.pipeline {
-            let m = mw.clone();
-            let rxr = rx.subscribe();
-            self.listeners.push(tokio::spawn(async move {
-                m.listen(rxr).await;
-            }));
+            if mw.has_sniff() {
+                let m = mw.clone();
+                let rxr = rx.subscribe();
+                self.sniffers.push(tokio::spawn(async move {
+                    m.sniff(rxr).await;
+                }));
+            }
         }
 
         // transformers
@@ -86,14 +97,19 @@ impl Middlewares {
             let mut content = rxr.recv().await.unwrap();
 
             for mw in &self.pipeline {
-                let orig = content.clone();
-                tokio::spawn(async move {
-                    mw.pre_transform(orig).await;
-                });
+                if mw.has_pre_transform() {
+                    let m = mw.clone();
+                    let orig = content.clone();
+                    tokio::spawn(async move {
+                        m.pre_transform(orig).await;
+                    });
+                }
             }
 
             for mw in &self.pipeline {
-                content = mw.transform(content).await;
+                if mw.has_transform() {
+                    content = mw.transform(content).await;
+                }
             }
 
             tx.send(content).unwrap();
@@ -101,7 +117,7 @@ impl Middlewares {
 
         // idk why i have this here
         #[allow(unreachable_code)]
-        for handle in self.listeners {
+        for handle in self.sniffers {
             handle.await.unwrap();
         }
     }

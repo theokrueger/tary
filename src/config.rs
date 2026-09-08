@@ -71,8 +71,6 @@ order = 10
 # Each rule is formatted as [pattern: string, replacement: string]
 # Full pattern/replacement syntax: https://docs.rs/regex/latest/regex/#syntax
 regexes = [
-    # surround first word with style
-    ["(?<group>[[:alpha:]]+)", "xX_$group_Xx"],
     # improve program morale
     ["tary is the worst", "tary is the best"],
   ]
