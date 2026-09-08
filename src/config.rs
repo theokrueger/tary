@@ -1,7 +1,6 @@
 //! Manage loading of the config file
 
 use log::{error, trace};
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File},

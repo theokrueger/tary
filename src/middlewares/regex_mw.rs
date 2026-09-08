@@ -1,10 +1,8 @@
 use crate::middlewares::TaryMiddleware;
 use crate::{config::Config, content::Content};
 use async_trait::async_trait;
-use log::info;
 use regex::Regex;
 use std::{error::Error, sync::Arc};
-use tokio::sync::broadcast::Receiver;
 
 pub struct RegexMiddleware {
     regexes: Vec<(Regex, String)>,

@@ -74,7 +74,7 @@ impl Middlewares {
             }
         }
 
-        mw.pipeline.sort_by(|a, b| a.order().cmp(&b.order()));
+        mw.pipeline.sort_by_key(|a| a.order());
 
         mw
     }
