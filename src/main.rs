@@ -82,7 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (txout, _) = broadcast::channel::<Content>(4);
     tokio::join!(
         sources.start(txin.clone()),
-        middlewares.start(txin.subscribe(), txout.clone()),
+        middlewares.start(txin, txout.clone()),
         destinations.start(txout)
     );
     Ok(())

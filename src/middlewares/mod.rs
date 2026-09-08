@@ -5,8 +5,8 @@ use regex_mw::RegexMiddleware;
 
 use crate::{config::Config, content::Content};
 use async_trait::async_trait;
+use log::error;
 use std::{error::Error, sync::Arc};
-use tokio::sync::Mutex;
 use tokio::{
     sync::broadcast::{Receiver, Sender},
     task::JoinHandle,
@@ -23,11 +23,13 @@ where
 
     /// Get order of this middleware
     fn order(&self) -> u32 {
-        0
+        u32::MAX
     }
 
     /// Prepare to do a transformation
-    async fn pre_transform(&self) {}
+    /// It is up to the middleware implementation to handle cases where `pre_transform()`
+    /// doesn't finish before `transform()` is called.
+    async fn pre_transform(&self, _ct: Content) {}
 
     /// Apply some transformation to content
     async fn transform(&self, ct: Content) -> Content {
@@ -35,11 +37,13 @@ where
     }
 
     /// Listener to content, cannot modify it
-    /// TODO listen actually
-    async fn listen(&self) {}
+    async fn listen(&self, _rx: Receiver<Content>) {}
 }
 
-pub struct Middlewares {
+pub struct Middlewares
+where
+    Self: 'static,
+{
     pipeline: Vec<Arc<dyn TaryMiddleware>>,
     listeners: Vec<JoinHandle<()>>,
 }
@@ -51,31 +55,51 @@ impl Middlewares {
             listeners: Vec::new(),
         };
 
-        mw.pipeline
-            .push(RegexMiddleware::init(cfg).unwrap().unwrap());
+        for x in [RegexMiddleware::init(cfg)] {
+            match x {
+                Ok(Some(a)) => mw.pipeline.push(a),
+                Ok(None) => {}
+                Err(e) => {
+                    error!("{e}")
+                }
+            }
+        }
+
+        mw.pipeline.sort_by(|a, b| a.order().cmp(&b.order()));
 
         mw
     }
 
-    pub async fn start(mut self, mut rx: Receiver<Content>, tx: Sender<Content>) {
+    pub async fn start(mut self, rx: Sender<Content>, tx: Sender<Content>) {
+        // listeners
         for mw in &self.pipeline {
             let m = mw.clone();
+            let rxr = rx.subscribe();
             self.listeners.push(tokio::spawn(async move {
-                m.listen().await;
+                m.listen(rxr).await;
             }));
         }
 
-        // self.pipeline.sort_by(|a, b| a.order().cmp(b.order()));
-
+        // transformers
+        let mut rxr = rx.subscribe();
         loop {
-            let mut content = rx.recv().await.unwrap();
+            let mut content = rxr.recv().await.unwrap();
+
             for mw in &self.pipeline {
-                mw.pre_transform();
+                let orig = content.clone();
+                tokio::spawn(async move {
+                    mw.pre_transform(orig).await;
+                });
+            }
+
+            for mw in &self.pipeline {
                 content = mw.transform(content).await;
             }
+
             tx.send(content).unwrap();
         }
 
+        // idk why i have this here
         #[allow(unreachable_code)]
         for handle in self.listeners {
             handle.await.unwrap();

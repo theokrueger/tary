@@ -64,17 +64,17 @@ port = 3000
 [middlewares.regex]
 enabled = true
 
-# (Optional) order of this middleware in the pipeline
+# (Optional) order of this middleware in the middleware pipeline
 order = 10
 
 # List of regex rules to apply
-# Each rule is formatted as [pattern: string, replacement: string, global: bool]
+# Each rule is formatted as [pattern: string, replacement: string]
 # Full pattern/replacement syntax: https://docs.rs/regex/latest/regex/#syntax
 regexes = [
     # surround first word with style
-    ["(?<group>[[:alpha:]]+)", "xX_$group_Xx", false],
+    ["(?<group>[[:alpha:]]+)", "xX_$group_Xx"],
     # improve program morale
-    ["tary is the worst", "tary is the best", true],
+    ["tary is the worst", "tary is the best"],
   ]
 
 ### Destinations ###
@@ -152,9 +152,13 @@ pub struct MiddlewaresConfig {
 #[derive(Serialize, Deserialize)]
 pub struct RegexMiddleware {
     pub enabled: bool,
-    #[serde(default)]
+    #[serde(default = "middleware_regex_order")]
     pub order: u32,
-    pub regexes: Vec<(String, String, Option<bool>)>,
+    pub regexes: Vec<(String, String)>,
+}
+
+const fn middleware_regex_order() -> u32 {
+    10
 }
 
 #[derive(Serialize, Deserialize, Default)]

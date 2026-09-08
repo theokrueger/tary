@@ -13,12 +13,16 @@ impl TaryMiddleware for RegexMiddleware {
         Ok(Some(Arc::new(Self {})))
     }
 
+    fn order(&self) -> u32 {
+        10
+    }
+
     async fn transform(&self, ct: Content) -> Content {
         info!("transform");
         ct
     }
 
-    async fn listen(&self) {
+    async fn listen(&self, rx: Receiver<Content>) {
         info!("listen");
     }
 }
