@@ -67,7 +67,7 @@ enabled = true
 # (Optional) order of this middleware in the middleware pipeline
 order = 10
 
-# List of regex rules to apply
+# List of regex rules to apply. Regexes are applied in the order defined here.
 # Each rule is formatted as [pattern: string, replacement: string]
 # Full pattern/replacement syntax: https://docs.rs/regex/latest/regex/#syntax
 regexes = [

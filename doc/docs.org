@@ -1,8 +1,9 @@
 - [[Installation]]
-  - [[Setting as a Service]]
+  - [[Running as a Service]]
 - [[Managing Sources]]
   - [[HTTP API/WebUI]]
 - [[Managing Middleware]]
+  - [[Regex]]
 - [[Managing Destinations]]
   - [[Console (stdout)]]
   - [[POS Printer (Receipt printer)]]
@@ -13,7 +14,7 @@ Install Rust.
 
 Install `libudev`:
 - Debian/Ubuntu: `apt install libudev-dev`
-- Fedora/RHEL: `dnf install 
+- Fedora/RHEL: `dnf install systemd-devel`
 - Arch: `pacman -S libudev`
 - Gentoo: `libudev` is probably already installed.
 
@@ -24,7 +25,7 @@ Install `libudev`:
   cargo install --path .
 #+END_SRC
 
-** Setting as as Service
+** Running as a Service
 Make your own service, or see the pre-provided service files for your init system:
 - [[./tary.openrc][openrc]]
   - [[How to Use][https://wiki.gentoo.org/wiki/OpenRC#User_services]]
@@ -44,7 +45,7 @@ Adding and enabling or disabling sources:
   enabled = true
   host = "127.0.0.1"
   port = 80
-  # html_path = "/path/to/index.html"  
+  \# html_path = "/path/to/index.html"  
 #+END_SRC
 
 If ~html_path~ is not specified, a default WebUI will be used.
@@ -61,27 +62,40 @@ If ~html_path~ is not specified, a default WebUI will be used.
   https_port = 443
   https_cert = "/path/to/public_certificate.pem"
   https_key = "/path/to/private_key.pem"
-  \# (Optional)
-  \# https_only = true 
 #+END_SRC
 
 These keys will be used to encrypt communication and enable HTTPS.
 
 
 ** Managing Middleware
-Adding and enabling or disabling Middleware
+Middleware comes in two forms: transformers and sniffers.
 
-*** TODO
+Transformers will make modifications to content, while sniffers will only get view-only access.
+Transformers feed content to eachother in a pipeline (ordering matters and is customizable!),
+each modifying it (or not) at its given step.
+Sniffers are distinct from destinations since they are not primarily user-consumable,
+and sniff the content /before/ it gets transformed.
+
+Adding and enabling or disabling Middleware:
+
+*** Regex
+#+BEGIN_SRC toml
+  [middlewares.regex]
+  enabled = true
+  regexes = [
+      ["tary is the worst", "tary is the best"],
+    ]
+#+END_SRC
 
 ** Managing destinations
 Adding and enabling or disabling destinations:
 
 *** Console (stdout)
-#+BEGIN_SRC
-[destinations.console]
-enabled = true
-# do not specify output for stdout
-output = "/tmp/tary.log" 
+#+BEGIN_SRC toml
+  [destinations.console]
+  enabled = true
+  \# do not specify output for stdout
+  #output = "/tmp/tary.log" 
 #+END_SRC
 
 *** POS Printer (Receipt printer)
@@ -101,9 +115,8 @@ output = "/tmp/tary.log"
 
 Reload udev by running ~udevadm control --reload-rules && udevadm trigger~ as root
 
-3. Ensure the printer is enabled in `tary.toml`
+3. Enable the printer
 #+BEGIN_SRC toml
-  # ~/.config/tary/tary.toml
   [destinations.pos_printer]
   enabled = true
   connection = "USB"
