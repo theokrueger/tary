@@ -1,6 +1,6 @@
 //! Manage loading of the config file
 
-use log::{error, trace};
+use log::{error, trace, warn};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, File},
@@ -37,6 +37,10 @@ port = 3000
 # (Optional) HTTPS support
 #https_enabled = false
 #https_only = false
+
+# (Optional, needs https_only) Require authentication to create TODOs
+# Specify key with environment variable `TARY_HTTP_AUTH`
+# require_auth = false
 
 # All three below options must be specified if https_enabled is true
 #https_port = 3001
@@ -135,6 +139,8 @@ pub struct HttpServerConfig {
     pub https_key: Option<String>,
     #[serde(default)]
     pub https_only: bool,
+    #[serde(default)]
+    pub require_auth: bool,
 }
 
 const fn http_server_default_port() -> u16 {
@@ -240,6 +246,12 @@ impl Config {
                 && p == a.port
             {
                 error!("HTTP and HTTPS ports are colliding while both servers are enabled!");
+                fail = true;
+            }
+            if a.require_auth && !a.https_only {
+                warn!(
+                    "Authentication is enabled but https_only is not enabled! Your authentication may be exposed."
+                );
             }
         }
 

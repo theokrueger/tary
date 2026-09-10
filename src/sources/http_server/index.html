@@ -52,10 +52,15 @@
       <label for="dest">Destination</label>
       <input id="dest" name="dest" type="text" placeholder="Where this gets completed.">
     </div>
+    <div>
+      <label for="dest">Auth</label>
+      <input id="auth" name="auth" type="password">
+    </div>
     <button type="submit">Submit</button>
   </form>
   <div id="result" class="status" style="display:none;"></div>
   <script>
+    document.getElementById('auth').value = localStorage.getItem("auth") || '';
     document.getElementById('reset-due-btn').addEventListener('click', _=>{document.getElementById("due").value = ''});
     const form = document.getElementById('todo-form');
     const result = document.getElementById('result');
@@ -136,20 +141,22 @@
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const content = document.getElementById('content').value;
-      const destInput = document.getElementById('dest').value;
-      const dueInput = document.getElementById('due').value;
+      const content = document.getElementById('content');
+      const destInput = document.getElementById('dest');
+      const dueInput = document.getElementById('due');
+      const authInput = document.getElementById('auth');
 
       let due = null;
-      if (dueInput) {
-        const parsed = new Date(dueInput);
+      if (dueInput.value) {
+        const parsed = new Date(dueInput.value);
         if (!isNaN(parsed.getTime())) {
           due = toRfc3339(parsed);
         }
       }
 
-      const body = { content };
-      if (destInput) body.dest = destInput;
+      const body = { content: content.value };
+      if (destInput.value) body.dest = destInput.value;
+      if (authInput.value) body.auth = authInput.value;
       if (due) body.due = due;
 
       try {
@@ -164,9 +171,11 @@
         if (resp.ok) {
           result.textContent = 'Submitted!';
           result.className = 'status ok';
-          form.reset();
+          content.value = '';
+          destInput.value = '';
+          localStorage.setItem("auth", authInput.value);
         } else {
-          result.textContent = resp.status + ' ' + resp.statusText;
+          result.textContent = 'Error: ' + resp.status + ' ' + resp.statusText;
           result.className = 'status error';
         }
       } catch (err) {

@@ -12,10 +12,9 @@ use axum::{
     routing::{get, post},
 };
 use axum_server::tls_rustls::RustlsConfig;
-use log::{info, trace};
+use log::{error, info, trace};
 use serde::Deserialize;
-use std::net::SocketAddr;
-use std::sync::Arc;
+use std::{env, net::SocketAddr, sync::Arc};
 use tokio::sync::broadcast::Sender;
 
 const DEFAULT_HTML: &str = include_str!("./index.html");
@@ -24,6 +23,7 @@ const DEFAULT_HTML: &str = include_str!("./index.html");
 struct AppState {
     tx: Sender<Content>,
     html_path: Option<String>,
+    authcode: String,
 }
 
 /// JSON body for creating a todo via POST /todo
@@ -32,6 +32,7 @@ struct TodoRequest {
     content: String,
     due: Option<String>,
     dest: Option<String>,
+    auth: Option<String>,
 }
 
 pub struct HttpServerSource {
@@ -45,6 +46,17 @@ impl TarySource for HttpServerSource {
         let state = Arc::new(AppState {
             tx,
             html_path: http.html_path.clone(),
+            authcode: if http.require_auth {
+                match env::var("TARY_HTTP_AUTH") {
+                    Ok(v) => v,
+                    Err(e) => {
+                        error!("Environment Variable TARY_HTTP_AUTH not found!");
+                        std::process::exit(1);
+                    }
+                }
+            } else {
+                "".to_string()
+            },
         });
 
         let app = Router::new()
@@ -119,6 +131,10 @@ async fn create_todo(
     Json(payload): Json<TodoRequest>,
 ) -> Result<impl IntoResponse, StatusCode> {
     trace!("Received todo via HTTP: {}", payload.content);
+
+    if state.authcode != "" && state.authcode != payload.auth.unwrap_or("".to_string()) {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
 
     let mut content = Content::new(ContentType::Todo, "http".to_string(), None);
     content.content = payload.content;
