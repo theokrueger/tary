@@ -3,11 +3,14 @@
 mod regex_mw;
 use regex_mw::RegexMiddleware;
 
-use crate::{config::Config, content::Content};
-use async_trait::async_trait;
+mod classification;
+use classification::ClassificationMiddleware;
+
+pub use crate::{config::Config, content::Content, jev::*};
+pub use async_trait::async_trait;
 use log::error;
-use std::{error::Error, sync::Arc};
-use tokio::{
+pub use std::{error::Error, sync::Arc};
+pub use tokio::{
     sync::broadcast::{Receiver, Sender},
     task::JoinHandle,
 };
@@ -17,7 +20,7 @@ pub trait TaryMiddleware
 where
     Self: 'static + Send + Sync,
 {
-    fn init(cfg: Arc<Config>) -> Result<Option<Arc<Self>>, Box<dyn Error>>
+    fn init(cfg: Arc<Config>, jev: Arc<Jev>) -> Result<Option<Arc<Self>>, Box<dyn Error>>
     where
         Self: Sized;
 
@@ -58,21 +61,27 @@ pub struct Middlewares {
 }
 
 impl Middlewares {
-    pub fn new(cfg: Arc<Config>) -> Self {
+    pub fn new(cfg: Arc<Config>, jev: Arc<Jev>) -> Self {
         let mut mw = Self {
             pipeline: Vec::new(),
             sniffers: Vec::new(),
         };
 
-        for x in [RegexMiddleware::init(cfg)] {
-            match x {
-                Ok(Some(a)) => mw.pipeline.push(a),
-                Ok(None) => {}
-                Err(e) => {
-                    error!("{e}")
+        // TODO: unelegant
+        macro_rules! mwinit {
+            ($x:expr) => {
+                match $x {
+                    Ok(Some(a)) => mw.pipeline.push(a),
+                    Ok(None) => {}
+                    Err(e) => {
+                        error!("{e}")
+                    }
                 }
-            }
+            };
         }
+
+        mwinit!(RegexMiddleware::init(cfg.clone(), jev.clone()));
+        mwinit!(ClassificationMiddleware::init(cfg, jev).into());
 
         mw.pipeline.sort_by_key(|a| a.order());
 

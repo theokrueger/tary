@@ -1,8 +1,5 @@
-use crate::middlewares::TaryMiddleware;
-use crate::{config::Config, content::Content};
-use async_trait::async_trait;
+use crate::middlewares::*;
 use regex::Regex;
-use std::{error::Error, sync::Arc};
 
 pub struct RegexMiddleware {
     regexes: Vec<(Regex, String)>,
@@ -11,7 +8,7 @@ pub struct RegexMiddleware {
 
 #[async_trait]
 impl TaryMiddleware for RegexMiddleware {
-    fn init(cfg: Arc<Config>) -> Result<Option<Arc<Self>>, Box<dyn Error>> {
+    fn init(cfg: Arc<Config>, _jev: Arc<Jev>) -> Result<Option<Arc<Self>>, Box<dyn Error>> {
         if let Some(rc) = &cfg.middlewares.regex
             && rc.enabled
         {

@@ -14,16 +14,21 @@ const CONFIG_FILE: &str = "config.toml";
 const DEFAULT_CONFIG: &str = r#"# Default tary config.
 # Reset this configuration by running `tary --create-config`
 #
-# For paths, absolute paths are preferred but relative paths
-# are relaltive to the config directory
+# For paths, absolute paths are preferred but relative paths can be used
+# and are relative to the config directory
 
+######################
 ### General Config ###
+######################
+
 [general]
 # Your username.
 name = "Jane Doe"
 
-
+######################
 ### Decision Model ###
+######################
+
 [jev]
 enabled = true
 
@@ -36,9 +41,11 @@ host = "127.0.0.1"
 port = 8000
 https_only = false
 
-
+###############
 ### Sources ###
-# All sources are optional, but at least one must be enabled
+###############
+
+# All sources are optional, but at least one should be enabled
 
 ## HTTP server source
 [sources.http_server]
@@ -67,21 +74,23 @@ port = 3000
 # html_path = "/path/to/index.html"
 
 
+###################
 ### Middlewares ###
+###################
+
 # All middlewares are optional
 # some may transform content before it gets forwarded to destinations
 # others may simply perform inferencing on the content data
 
 # All middlewares have some way to define their order in the pipeline
 # This is generally set per-middleware with the optional `order` parameter.
+# (Default 0-100, where 0 goes first)
 # Without specifying order, a default order will be used.
 
 ## regex middleware
 # applies a list of regexes sequentially to incoming content
 [middlewares.regex]
 enabled = true
-
-# (Optional) order of this middleware in the middleware pipeline
 order = 10
 
 # List of regex rules to apply. Regexes are applied in the order defined here.
@@ -92,8 +101,19 @@ regexes = [
     ["tary is the worst", "tary is the best"],
   ]
 
+## classification middleware
+# uses configured jev server to classify some unpopulated fields in this entry
+# i.e. assigning priority
+[middlewares.classification]
+enabled = true
+order = 100
+
+
+####################
 ### Destinations ###
-# All destinations are optional, but at least one must be enabled
+####################
+
+# All destinations are optional, but at least one should be enabled
 
 ## Console destination
 [destinations.console]
@@ -179,11 +199,12 @@ const fn http_server_default_port() -> u16 {
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct MiddlewaresConfig {
-    pub regex: Option<RegexMiddleware>,
+    pub regex: Option<RegexMiddlewareConfig>,
+    pub classification: Option<ClassificationMiddlewareConfig>,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct RegexMiddleware {
+pub struct RegexMiddlewareConfig {
     pub enabled: bool,
     #[serde(default = "middleware_regex_order")]
     pub order: u32,
@@ -192,6 +213,17 @@ pub struct RegexMiddleware {
 
 const fn middleware_regex_order() -> u32 {
     10
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ClassificationMiddlewareConfig {
+    pub enabled: bool,
+    #[serde(default = "classification_regex_order")]
+    pub order: u32,
+}
+
+const fn classification_regex_order() -> u32 {
+    100
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -286,11 +318,18 @@ impl Config {
         }
 
         // jev checks
-        if cfg.jev.enabled
-            && (cfg.jev.host.is_none() || cfg.jev.port.is_none() || cfg.jev.provider.is_none())
+        if cfg.jev.enabled {
+            if (cfg.jev.host.is_none() || cfg.jev.port.is_none() || cfg.jev.provider.is_none()) {
+                error!(
+                    "Jev is enabled, but one or more required configurations (host, port, provider) is missing!"
+                );
+                fail = true;
+            }
+        } else if let Some(cmw) = &cfg.middlewares.classification
+            && cmw.enabled
         {
             error!(
-                "Jev is enabled, but one or more required configurations (host, port, provider) is missing!"
+                "Jev is not enabled, but the classification middleware (which relies on jev) is!"
             );
             fail = true;
         }

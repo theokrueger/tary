@@ -1,14 +1,18 @@
 //! Handler for input sources
-use crate::{config::Config, content::Content};
-use std::sync::Arc;
-use tokio::sync::broadcast::Sender;
+pub use crate::{
+    config::Config,
+    content::{Content, ContentType},
+    jev::*,
+};
+pub use std::sync::Arc;
+pub use tokio::sync::broadcast::Sender;
 
 mod http_server;
 use http_server::HttpServerSource;
 
 pub trait TarySource {
     async fn listen(self, tx: Sender<Content>);
-    fn init(cfg: Arc<Config>) -> Option<Box<Self>>;
+    fn init(cfg: Arc<Config>, jev: Arc<Jev>) -> Option<Box<Self>>;
 }
 
 pub struct Sources {
@@ -16,9 +20,9 @@ pub struct Sources {
 }
 
 impl Sources {
-    pub fn new(cfg: Arc<Config>) -> Self {
+    pub fn new(cfg: Arc<Config>, jev: Arc<Jev>) -> Self {
         Self {
-            http_server: HttpServerSource::init(cfg.clone()),
+            http_server: HttpServerSource::init(cfg.clone(), jev),
         }
     }
 

@@ -1,12 +1,7 @@
-use crate::{
-    Content,
-    config::{Config, PosConnectionTypes as Pct},
-    destinations::TaryDestination,
-};
+use crate::{config::PosConnectionTypes as Pct, content::ContentPriority, destinations::*};
 use escpos::{driver::*, printer::Printer, printer_options::PrinterOptions, utils::*};
 use log::{error, info, trace};
-use std::{error::Error, sync::Arc, time::Duration};
-use tokio::sync::broadcast::Receiver;
+use std::time::Duration;
 
 pub struct PosPrinter {
     connection_type: Pct,
@@ -128,6 +123,17 @@ impl PosPrinter {
             .underline(UnderlineMode::Double)?
             .bold(true)?
             .writeln(content.content_type.to_string().as_str())?;
+
+        // priority
+        if let Some(prio) = &content.content_priority
+            && prio != &ContentPriority::Normal
+        {
+            printer
+                .reset_size()?
+                .feed()?
+                .justify(JustifyMode::CENTER)?
+                .writeln(format!("priority: {}", prio.to_string()).as_str())?;
+        }
 
         // source
         printer

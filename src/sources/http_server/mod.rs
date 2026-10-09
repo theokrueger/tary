@@ -1,9 +1,7 @@
 //! HTTP server input source.
 //! Serves a simple HTML page on '/' and provides a /todo API for creating todos.
 
-use crate::config::Config;
-use crate::content::{Content, ContentType};
-use crate::sources::TarySource;
+use crate::sources::*;
 use axum::{
     Router,
     extract::{Json, State},
@@ -14,8 +12,7 @@ use axum::{
 use axum_server::tls_rustls::RustlsConfig;
 use log::{error, info, trace};
 use serde::Deserialize;
-use std::{env, net::SocketAddr, sync::Arc};
-use tokio::sync::broadcast::Sender;
+use std::{env, net::SocketAddr};
 
 const DEFAULT_HTML: &str = include_str!("./index.html");
 
@@ -105,7 +102,7 @@ impl TarySource for HttpServerSource {
         }
     }
 
-    fn init(cfg: Arc<Config>) -> Option<Box<Self>> {
+    fn init(cfg: Arc<Config>, _jev: Arc<Jev>) -> Option<Box<Self>> {
         let http = cfg.sources.http_server.as_ref()?;
         if http.enabled {
             Some(Box::new(Self { cfg }))
@@ -133,6 +130,7 @@ async fn create_todo(
     trace!("Received todo via HTTP: {}", payload.content);
 
     if state.authcode != "" && state.authcode != payload.auth.unwrap_or("".to_string()) {
+        trace!("Denying unauthorized TODO post");
         return Err(StatusCode::UNAUTHORIZED);
     }
 

@@ -1,7 +1,6 @@
-use crate::{config::Config, content::Content, destinations::TaryDestination};
+use crate::destinations::*;
 use log::{error, trace};
-use std::{error::Error, fs::File, io::Write, path::PathBuf, sync::Arc};
-use tokio::sync::broadcast::Receiver;
+use std::{fs::File, io::Write, path::PathBuf};
 
 pub struct Console {
     dest: Option<PathBuf>,
@@ -28,8 +27,13 @@ impl TaryDestination for Console {
             };
             trace!("Console dest received content");
             let txt = format!(
-                "[{ctype}] Date: {date}\nFrom: {from}\nDue: {due}\nDestination: {dest} \n\t{text}",
+                "[{ctype}] Date: {date}\nPriority: {prio}\nFrom: {from}\nDue: {due}\nDestination: {dest} \n\t{text}",
                 ctype = content.content_type,
+                prio = if let Some(cp) = content.content_priority {
+                    cp.to_string()
+                } else {
+                    "Unspecified".to_string()
+                },
                 date = content.date,
                 from = content.source,
                 due = content

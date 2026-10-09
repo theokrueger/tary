@@ -57,23 +57,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let jev = Jev::new(cfg.clone());
-    use crate::jev::{JevQuestion, JevRequest};
-    let jr = JevRequest::state("Help! I am dying of death!".to_string()).add_question(
-        "abc".to_string(),
-        JevQuestion::noul("Is this a problem?".to_string()),
-    );
-    println!("{:?}", jev.request(jr).await);
+    let jev = Arc::new(Jev::new(cfg.clone()));
 
-    let sources = Sources::new(cfg.clone());
+    let sources = Sources::new(cfg.clone(), jev.clone());
     let sc = sources.count();
     info!("Loaded {sc} sources");
 
-    let middlewares = Middlewares::new(cfg.clone());
+    let middlewares = Middlewares::new(cfg.clone(), jev.clone());
     let mc = middlewares.count();
     info!("Loaded {mc} middlewares");
 
-    let destinations = Destinations::new(cfg.clone());
+    let destinations = Destinations::new(cfg.clone(), jev);
     let dc = destinations.count();
     info!("Loaded {dc} destinations");
 

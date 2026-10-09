@@ -1,14 +1,25 @@
 //! jev.rs
 //!
 //! support for jev-style decision models for various content management purposes.
+//! usage:
+//! ```rust
+//! use crate::jev::{JevQuestion, JevRequest};
+//! let jr = JevRequest::state("Help! I am in great pain!").add_question(
+//!     "pain",
+//!     JevQuestion::noul("Is this a problem?"),
+//! );
+//! println!("{:?}", jev.request(jr).await);
+//! ```
+
 use crate::config::JevProvider;
 use crate::{config::Config, content::Content};
 
+use log::error;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::broadcast::Sender;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum JevQuestionType {
     #[serde(rename = "choice")]
     Choice,
@@ -18,14 +29,14 @@ pub enum JevQuestionType {
     Noul,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum JevCriteria {
     Choice(HashMap<String, String>),
     Score(Vec<String>),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct JevQuestion {
     #[serde(rename = "type")]
     pub qtype: JevQuestionType,
@@ -33,49 +44,50 @@ pub struct JevQuestion {
     /// req for type::Score and type::Choice
     pub criteria: Option<JevCriteria>,
 }
-
 impl JevQuestion {
-    pub fn choice(instructions: String, criteria: JevCriteria) -> Self {
+    pub fn choice(instructions: &str, criteria: JevCriteria) -> Self {
+        assert!(matches!(criteria, JevCriteria::Choice(_)));
         Self {
             qtype: JevQuestionType::Choice,
-            instructions,
+            instructions: instructions.to_string(),
             criteria: Some(criteria),
         }
     }
 
-    pub fn score(instructions: String, criteria: JevCriteria) -> Self {
+    pub fn score(instructions: &str, criteria: JevCriteria) -> Self {
+        assert!(matches!(criteria, JevCriteria::Score(_)));
         Self {
             qtype: JevQuestionType::Score,
-            instructions,
+            instructions: instructions.to_string(),
             criteria: Some(criteria),
         }
     }
 
-    pub fn noul(instructions: String) -> Self {
+    pub fn noul(instructions: &str) -> Self {
         Self {
             qtype: JevQuestionType::Noul,
-            instructions,
+            instructions: instructions.to_string(),
             criteria: None,
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct JevRequest {
     pub state: String,
     pub questions: HashMap<String, JevQuestion>,
 }
 
 impl JevRequest {
-    pub fn state(s: String) -> Self {
+    pub fn state(s: &str) -> Self {
         Self {
-            state: s,
+            state: s.to_string(),
             questions: HashMap::new(),
         }
     }
 
-    pub fn add_question(mut self, id: String, q: JevQuestion) -> Self {
-        self.questions.insert(id, q);
+    pub fn add_question(mut self, id: &str, q: JevQuestion) -> Self {
+        self.questions.insert(id.to_string(), q);
         self
     }
 }
@@ -83,15 +95,15 @@ impl JevRequest {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct JevAnswer {
     #[serde(rename = "type")]
-    qtype: JevQuestionType,
+    pub qtype: JevQuestionType,
     /// req on type::Choice
-    choice: Option<String>,
+    pub choice: Option<String>,
     /// req on type::Score
-    score: Option<f32>,
+    pub score: Option<f32>,
     /// req on type::Noul
-    noul: Option<f32>,
+    pub noul: Option<f32>,
     /// noreq on type::Noul
-    confidence: Option<f32>,
+    pub confidence: Option<f32>,
     // toss probabilities
     // toss legend
 }
@@ -99,7 +111,7 @@ pub struct JevAnswer {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct JevResponse {
     //model: String,
-    answers: HashMap<String, JevAnswer>,
+    pub answers: HashMap<String, JevAnswer>,
     //usage: HashMap<String, u32>,
     //latency_ms: f32,
 }
@@ -107,6 +119,14 @@ pub struct JevResponse {
 #[derive(Debug)]
 pub enum JevError {
     Disabled,
+    RequestError(String),
+}
+
+impl From<reqwest::Error> for JevError {
+    fn from(value: reqwest::Error) -> Self {
+        error!("{value}");
+        Self::RequestError(format!("{value}"))
+    }
 }
 
 pub struct Jev {
@@ -143,13 +163,14 @@ impl Jev {
             return Err(JevError::Disabled);
         }
 
-        println!("{:?}", serde_json::to_string(&req));
-
-        let resp = self.client.post(&self.uri).json(&req).send().await;
-
-        // println!("{:?}", resp.unwrap().json::<JevResponse>().await.unwrap());
-        //println!("{:?}", resp.unwrap().text().await);
-
-        Ok(resp.unwrap().json::<JevResponse>().await.unwrap())
+        Ok(self
+            .client
+            .post(&self.uri)
+            .json(&req)
+            .send()
+            .await?
+            .json::<JevResponse>()
+            .await
+            .unwrap())
     }
 }

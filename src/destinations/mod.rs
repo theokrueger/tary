@@ -4,9 +4,13 @@ mod pos_printer;
 use console::Console;
 use pos_printer::PosPrinter;
 
-use crate::{config::Config, content::Content};
-use std::{error::Error, sync::Arc};
-use tokio::sync::broadcast::{Receiver, Sender};
+pub use crate::{
+    config::Config,
+    content::{Content, ContentType},
+    jev::*,
+};
+pub use std::{error::Error, sync::Arc};
+pub use tokio::sync::broadcast::{Receiver, Sender};
 
 pub trait TaryDestination {
     fn init(cfg: Arc<Config>) -> Result<Option<Box<Self>>, Box<dyn Error>>;
@@ -20,7 +24,7 @@ pub struct Destinations {
 }
 
 impl Destinations {
-    pub fn new(cfg: Arc<Config>) -> Self {
+    pub fn new(cfg: Arc<Config>, jev: Arc<Jev>) -> Self {
         Self {
             pos_printer: PosPrinter::init(cfg.clone())
                 .expect("Failed to init POS printer destination"),
