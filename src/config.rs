@@ -23,6 +23,20 @@ const DEFAULT_CONFIG: &str = r#"# Default tary config.
 name = "Jane Doe"
 
 
+### Decision Model ###
+[jev]
+enabled = true
+
+# What provider compatibility do you want to use?
+# (no-auth Systemone-compatible is the only supported provider currently)
+provider = "Systemone"
+
+# HTTP/S API endpoint for this provider
+host = "127.0.0.1"
+port = 8000
+https_only = false
+
+
 ### Sources ###
 # All sources are optional, but at least one must be enabled
 
@@ -108,6 +122,8 @@ usb_pid = 0x811e
 pub struct Config {
     pub general: GeneralConfig,
     #[serde(default)]
+    pub jev: JevConfig,
+    #[serde(default)]
     pub sources: SourcesConfig,
     #[serde(default)]
     pub middlewares: MiddlewaresConfig,
@@ -118,6 +134,20 @@ pub struct Config {
 #[derive(Serialize, Deserialize)]
 pub struct GeneralConfig {
     pub name: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum JevProvider {
+    Systemone, // {host}/v1/systemone endpoint
+}
+
+#[derive(Serialize, Deserialize, Default)]
+pub struct JevConfig {
+    pub enabled: bool,
+    pub provider: Option<JevProvider>,
+    pub host: Option<String>,
+    pub port: Option<u16>,
+    pub https_only: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -253,6 +283,16 @@ impl Config {
                     "Authentication is enabled but https_only is not enabled! Your authentication may be exposed."
                 );
             }
+        }
+
+        // jev checks
+        if cfg.jev.enabled
+            && (cfg.jev.host.is_none() || cfg.jev.port.is_none() || cfg.jev.provider.is_none())
+        {
+            error!(
+                "Jev is enabled, but one or more required configurations (host, port, provider) is missing!"
+            );
+            fail = true;
         }
 
         if fail {

@@ -2,15 +2,14 @@ mod args;
 mod config;
 mod content;
 mod destinations;
+mod jev;
 mod middlewares;
 mod sources;
 
-use crate::args::Args;
-use crate::config::Config;
-use crate::content::Content;
-use crate::destinations::Destinations;
-use crate::middlewares::Middlewares;
-use crate::sources::Sources;
+use crate::{
+    args::Args, config::Config, content::Content, destinations::Destinations, jev::Jev,
+    middlewares::Middlewares, sources::Sources,
+};
 
 use clap::Parser;
 use inquire::Confirm;
@@ -57,6 +56,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             std::process::exit(1);
         }
     });
+
+    let jev = Jev::new(cfg.clone());
+    use crate::jev::{JevQuestion, JevRequest};
+    let jr = JevRequest::state("Help! I am dying of death!".to_string()).add_question(
+        "abc".to_string(),
+        JevQuestion::noul("Is this a problem?".to_string()),
+    );
+    println!("{:?}", jev.request(jr).await);
 
     let sources = Sources::new(cfg.clone());
     let sc = sources.count();

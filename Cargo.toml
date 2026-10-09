@@ -21,3 +21,4 @@ time = "^0.3.55"
 async-trait = "0.1.92"
 regex = "1.13.1"
 axum-server = { version = "0.8.0", features = ["tls-rustls"] }
+reqwest = { version = "0.13.5", features = ["json"] }
