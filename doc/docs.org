@@ -14,11 +14,11 @@
 ** Dependencies
 Install Rust.
 
-Install `libudev`:
-- Debian/Ubuntu: `apt install libudev-dev`
-- Fedora/RHEL: `dnf install systemd-devel`
-- Arch: `pacman -S libudev`
-- Gentoo: `libudev` is probably already installed.
+Install ~libudev~:
+- Debian/Ubuntu: ~apt install libudev-dev~
+- Fedora/RHEL: ~dnf install systemd-devel~
+- Arch: ~pacman -S libudev~
+- Gentoo: ~libudev~ is probably already installed.
 
 ** Building
 #+BEGIN_SRC bash
@@ -51,7 +51,7 @@ Proceed to [[Managing Sources]] or [[Managing Destinations]] to make Tary do... 
 
 * Decision Models
 Tary optionally uses decision models to filter, annotate, or modify content!
-A personal choice is [[https://github.com/strands-labs/strands-decider][Strands Decider]].
+A decent choice is [[https://github.com/jaredpalmer/kev][Kev]] for hosting locally.
 
 Since this may be an external API and is there fallible, operations will be retried or queued in cases of low availability or high throughput.
 Note that operations depending on this API *may* be permastuck if your jev server fails.
@@ -111,6 +111,9 @@ and sniff the content /before/ it gets transformed.
 Adding and enabling or disabling Middleware:
 
 *** Regex
+Test out your regex patterns first at [[https://rrx.theokrueger.dev]],
+as Rust regex is slightly different from what you may imagine!
+
 #+BEGIN_SRC toml
   [middlewares.regex]
   enabled = true

@@ -15,14 +15,6 @@ Install `libudev` (i.e. `sudo apt install libudev-dev` on Debian).
 
 See [[./doc/docs.org][the documentation]] for more information
 
-# ** Usage Patterns
-# *** POS System
-# Buy a cheap POS printer, and use it as your main destination.
-# Content will be printed out on receipt paper, which when completed can be stuck onto a receipt spike (it's very satisfying).
-
-# Recieve new content with an exposed (authenticated) HTTP API from anywhere!
-
-
 ** Adding your own services
 The code is very extensible, and the HTTP API source can be easily interacted with by external programs.
 

@@ -6,7 +6,7 @@ use pos_printer::PosPrinter;
 
 pub use crate::{
     config::Config,
-    content::{Content, ContentType},
+    content::Content,
     jev::*,
 };
 pub use std::{error::Error, sync::Arc};
@@ -24,7 +24,7 @@ pub struct Destinations {
 }
 
 impl Destinations {
-    pub fn new(cfg: Arc<Config>, jev: Arc<Jev>) -> Self {
+    pub fn new(cfg: Arc<Config>, _jev: Arc<Jev>) -> Self {
         Self {
             pos_printer: PosPrinter::init(cfg.clone())
                 .expect("Failed to init POS printer destination"),

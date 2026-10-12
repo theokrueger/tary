@@ -319,7 +319,7 @@ impl Config {
 
         // jev checks
         if cfg.jev.enabled {
-            if (cfg.jev.host.is_none() || cfg.jev.port.is_none() || cfg.jev.provider.is_none()) {
+            if cfg.jev.host.is_none() || cfg.jev.port.is_none() || cfg.jev.provider.is_none() {
                 error!(
                     "Jev is enabled, but one or more required configurations (host, port, provider) is missing!"
                 );

@@ -46,7 +46,7 @@ impl TarySource for HttpServerSource {
             authcode: if http.require_auth {
                 match env::var("TARY_HTTP_AUTH") {
                     Ok(v) => v,
-                    Err(e) => {
+                    Err(_e) => {
                         error!("Environment Variable TARY_HTTP_AUTH not found!");
                         std::process::exit(1);
                     }
@@ -129,7 +129,7 @@ async fn create_todo(
 ) -> Result<impl IntoResponse, StatusCode> {
     trace!("Received todo via HTTP: {}", payload.content);
 
-    if state.authcode != "" && state.authcode != payload.auth.unwrap_or("".to_string()) {
+    if !state.authcode.is_empty() && state.authcode != payload.auth.unwrap_or("".to_string()) {
         trace!("Denying unauthorized TODO post");
         return Err(StatusCode::UNAUTHORIZED);
     }

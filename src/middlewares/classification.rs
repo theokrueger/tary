@@ -75,12 +75,9 @@ impl TaryMiddleware for ClassificationMiddleware {
             );
         }
 
-        println!("{:?}", state);
-
-        if state.questions.len() > 0 {
+        if !state.questions.is_empty() {
             let resp = self.jev.request(state).await.unwrap().answers; // TODO: safety
-            println!("{:?}", resp);
-            if let Some(ref cp) = resp.get(&"priority".to_string()) {
+            if let Some(cp) = resp.get(&"priority".to_string()) {
                 ct.content_priority =
                     Some(serde_json::from_str(cp.choice.as_ref().unwrap().as_str()).unwrap());
             }

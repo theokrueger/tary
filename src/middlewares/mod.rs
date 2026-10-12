@@ -81,7 +81,7 @@ impl Middlewares {
         }
 
         mwinit!(RegexMiddleware::init(cfg.clone(), jev.clone()));
-        mwinit!(ClassificationMiddleware::init(cfg, jev).into());
+        mwinit!(ClassificationMiddleware::init(cfg, jev));
 
         mw.pipeline.sort_by_key(|a| a.order());
 

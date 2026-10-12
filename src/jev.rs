@@ -11,13 +11,12 @@
 //! println!("{:?}", jev.request(jr).await);
 //! ```
 
-use crate::config::JevProvider;
-use crate::{config::Config, content::Content};
+//use crate::config::JevProvider;
+use crate::config::Config;
 
 use log::error;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
-use tokio::sync::broadcast::Sender;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum JevQuestionType {
@@ -144,7 +143,7 @@ impl Jev {
         };
 
         let host = cfg.jev.host.clone().unwrap_or_default();
-        let port = cfg.jev.port.clone().unwrap_or_default();
+        let port = cfg.jev.port.unwrap_or_default();
         let api = "v1/systemone";
 
         Self {

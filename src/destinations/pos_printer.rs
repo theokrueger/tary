@@ -132,7 +132,7 @@ impl PosPrinter {
                 .reset_size()?
                 .feed()?
                 .justify(JustifyMode::CENTER)?
-                .writeln(format!("priority: {}", prio.to_string()).as_str())?;
+                .writeln(format!("priority: {}", prio).as_str())?;
         }
 
         // source
